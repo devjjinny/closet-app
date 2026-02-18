@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: 인증된 요청인지 확인
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: 본인 문서인지 확인
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Helper: 필수 필드 존재 확인
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // Users 컬렉션
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if false; // 사용자 삭제는 Admin SDK로만
+
+      // Garments 서브컬렉션
+      match /garments/{garmentId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && hasRequiredFields(['category', 'dominantHex', 'warmth', 'formality', 'waterproof', 'image'])
+          && request.resource.data.warmth is int
+          && request.resource.data.warmth >= 1
+          && request.resource.data.warmth <= 5
+          && request.resource.data.formality is int
+          && request.resource.data.formality >= 1
+          && request.resource.data.formality <= 5
+          && request.resource.data.waterproof is bool
+          && request.resource.data.category in ['top', 'bottom', 'outer', 'dress', 'shoes', 'bag', 'accessory'];
+        allow update: if isOwner(uid);
+        allow delete: if isOwner(uid);
+      }
+
+      // Outfits 서브컬렉션
+      match /outfits/{outfitId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && hasRequiredFields(['dateKey', 'items', 'weatherSnapshot'])
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0;
+        allow update: if isOwner(uid);
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    // 기본 거부
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

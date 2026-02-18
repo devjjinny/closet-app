@@ -1,0 +1,65 @@
+name: closet_app
+description: Weather-based outfit recommendation app
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: any
+  firebase_auth: any
+  cloud_firestore: any
+  firebase_storage: any
+
+  # State Management
+  flutter_riverpod: any
+  riverpod_annotation: any
+
+  # Navigation
+  go_router: any
+
+  # Image Processing
+  image_picker: any
+  image_cropper: any
+  image: any
+
+  # Location & Weather
+  geolocator: any
+  http: any
+
+  # Local Storage / Cache
+  shared_preferences: any
+
+  # UI Utilities
+  cached_network_image: any
+  flutter_svg: any
+  shimmer: any
+  intl: any
+
+  # Utils
+  uuid: any
+  path_provider: any
+  path: any
+  freezed_annotation: any
+  json_annotation: any
+  collection: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+  build_runner: any
+  freezed: any
+  json_serializable: any
+  riverpod_generator: any
+  mockito: any
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

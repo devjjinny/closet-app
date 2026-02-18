@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Users 하위 파일만 접근 가능
+    match /users/{uid}/{allPaths=**} {
+      // 본인만 읽기/쓰기
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+        // 파일 크기 제한: 10MB
+        && request.resource.size < 10 * 1024 * 1024
+        // 이미지 타입만 허용
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // 기본 거부
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

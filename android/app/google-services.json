@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "126009314241",
+    "project_id": "closet-app-mvp",
+    "storage_bucket": "closet-app-mvp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:126009314241:android:9a072bde0187427da7fd40",
+        "android_client_info": {
+          "package_name": "com.closetapp.closet_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4LHJmZzUKHPFd3F9jwTWK8wDBEt7inxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
