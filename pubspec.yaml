@@ -27,6 +27,7 @@ dependencies:
   image_picker: any
   image_cropper: any
   image: any
+  camera: any
 
   # Location & Weather
   geolocator: any

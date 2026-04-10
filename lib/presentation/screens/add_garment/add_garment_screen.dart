@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../../../core/constants/enums.dart';
+import 'camera_guide_screen.dart';
 import '../../../data/models/garment_model.dart';
 import '../../../services/image/background_removal_service.dart';
 import '../../providers/providers.dart';
@@ -317,8 +318,28 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     );
     if (source == null) return;
 
-    final picked = await _picker.pickImage(source: source, maxWidth: 2048);
-    if (picked == null) return;
+    File? imageFile;
+    if (source == ImageSource.camera &&
+        (_category == GarmentCategory.top ||
+            _category == GarmentCategory.bottom ||
+            _category == GarmentCategory.outer ||
+            _category == GarmentCategory.dress)) {
+      // 가이드 오버레이 카메라 사용
+      imageFile = await Navigator.push<File>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CameraGuideScreen(category: _category),
+          fullscreenDialog: true,
+        ),
+      );
+    } else {
+      final picked = await _picker.pickImage(source: source, maxWidth: 2048);
+      if (picked != null) imageFile = File(picked.path);
+    }
+    if (imageFile == null) return;
+
+    // 기존 XFile을 File로 대체했으므로 crop 처리
+    final picked = XFile(imageFile.path);
 
     // Crop
     final cropped = await ImageCropper().cropImage(
