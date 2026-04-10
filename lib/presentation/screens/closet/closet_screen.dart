@@ -155,8 +155,8 @@ class _GarmentCard extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: 10,
+                  height: 10,
                   decoration: BoxDecoration(
                     color: _parseColor(garment.dominantHex),
                     shape: BoxShape.circle,
@@ -166,7 +166,7 @@ class _GarmentCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    garment.category.label,
+                    garment.name ?? garment.category.label,
                     style: const TextStyle(fontSize: 11),
                     overflow: TextOverflow.ellipsis,
                   ),

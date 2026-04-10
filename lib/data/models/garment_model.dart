@@ -45,6 +45,7 @@ class GarmentModel {
     required this.waterproof,
     required this.image,
     required this.createdAt,
+    this.name,
     this.updatedAt,
     this.status = GarmentStatus.active,
     this.subCategory,
@@ -56,6 +57,7 @@ class GarmentModel {
 
   final String id;
   final GarmentCategory category;
+  final String? name; // 사용자가 지정한 옷 이름 (예: "흰 린넨 셔츠")
   final String dominantHex;
   final int warmth; // 1-5
   final int formality; // 1-5
@@ -107,6 +109,7 @@ class GarmentModel {
                   ))
               .toList() ??
           [],
+      name: data['name'] as String?,
       notes: data['notes'] as String?,
     );
   }
@@ -121,6 +124,7 @@ class GarmentModel {
         'createdAt': FieldValue.serverTimestamp(),
         if (updatedAt != null) 'updatedAt': FieldValue.serverTimestamp(),
         'status': status.name,
+        if (name != null) 'name': name,
         if (subCategory != null) 'subCategory': subCategory,
         'palette': palette,
         'seasonTags': seasonTags.map((e) => e.name).toList(),
@@ -131,6 +135,7 @@ class GarmentModel {
   GarmentModel copyWith({
     String? id,
     GarmentCategory? category,
+    String? name,
     String? dominantHex,
     int? warmth,
     int? formality,
@@ -148,6 +153,7 @@ class GarmentModel {
     return GarmentModel(
       id: id ?? this.id,
       category: category ?? this.category,
+      name: name ?? this.name,
       dominantHex: dominantHex ?? this.dominantHex,
       warmth: warmth ?? this.warmth,
       formality: formality ?? this.formality,

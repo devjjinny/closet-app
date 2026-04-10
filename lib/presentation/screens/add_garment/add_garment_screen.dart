@@ -23,11 +23,18 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   File? _thumbFile;
   String? _dominantColor;
 
+  final _nameController = TextEditingController();
   GarmentCategory _category = GarmentCategory.top;
   int _warmth = 3;
   int _formality = 3;
   bool _waterproof = false;
   final List<StyleTag> _styleTags = [];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   bool _processing = false;
   bool _uploading = false;
@@ -58,6 +65,18 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
             if (_cutoutFile != null) ...[
               // Shooting guide tip
               _buildShootingTip(),
+              const SizedBox(height: 16),
+
+              // Name input
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: '이름 (선택)',
+                  hintText: '예: 흰 린넨 셔츠',
+                ),
+                textCapitalization: TextCapitalization.none,
+                maxLength: 30,
+              ),
               const SizedBox(height: 16),
 
               // Category
@@ -404,6 +423,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
       final garment = GarmentModel(
         id: '', // Will be set by repository
         category: _category,
+        name: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
         dominantHex: _dominantColor ?? '#808080',
         warmth: _warmth,
         formality: _formality,
