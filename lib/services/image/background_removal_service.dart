@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:typed_data' show Uint8List;
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_selfie_segmentation/google_mlkit_selfie_segmentation.dart';
 import 'package:image/image.dart' as img;
@@ -12,19 +12,19 @@ import 'package:path/path.dart' as p;
 class BackgroundRemovalService {
   Future<File> removeBackground(File inputFile) async {
     final inputImage = InputImage.fromFile(inputFile);
-    final segmenter = SelfieSegmenter(options: SelfieSegmenterOptions());
+    final segmenter = SelfieSegmenter(mode: SegmenterMode.single);
 
     try {
       final mask = await segmenter.processImage(inputImage);
 
       // ML Kit이 사람을 감지한 경우
-      if (mask?.confidenceMask != null && _hasPerson(mask!.confidenceMask!)) {
+      if (mask != null && _hasPerson(mask.confidences)) {
         final imageBytes = await inputFile.readAsBytes();
         final resultBytes = await compute(
           _applySegmentationMask,
           _MaskParams(
             imageBytes: imageBytes,
-            maskValues: mask.confidenceMask!,
+            maskValues: mask.confidences,
             maskWidth: mask.width,
             maskHeight: mask.height,
           ),
@@ -34,7 +34,7 @@ class BackgroundRemovalService {
     } catch (_) {
       // ML Kit 실패 시 폴백
     } finally {
-      segmenter.close();
+      await segmenter.close();
     }
 
     // 폴백: 색상 기반 배경제거 (흰/밝은 배경 전용)
@@ -42,12 +42,12 @@ class BackgroundRemovalService {
   }
 
   /// ML Kit 결과에 실제로 사람이 있는지 확인 (confidence 0.5 이상 픽셀 비율)
-  bool _hasPerson(Float32List mask) {
+  bool _hasPerson(List<double> confidences) {
     int foreground = 0;
-    for (final v in mask) {
+    for (final v in confidences) {
       if (v > 0.5) foreground++;
     }
-    return foreground / mask.length > 0.05; // 5% 이상이면 사람 있음
+    return foreground / confidences.length > 0.05; // 5% 이상이면 사람 있음
   }
 
   Future<File> _colorBasedRemoval(File inputFile) async {
@@ -218,7 +218,7 @@ class _MaskParams {
   });
 
   final Uint8List imageBytes;
-  final Float32List maskValues;
+  final List<double> maskValues;
   final int maskWidth;
   final int maskHeight;
 }
