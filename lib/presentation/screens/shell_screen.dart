@@ -26,7 +26,7 @@ class ShellScreen extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.wb_sunny_outlined),
             activeIcon: Icon(Icons.wb_sunny),
-            label: '오늘 코디',
+            label: '오늘',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history_outlined),

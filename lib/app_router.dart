@@ -12,13 +12,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
   return GoRouter(
-    initialLocation: '/closet',
+    initialLocation: '/today',
     redirect: (context, state) {
       final isLoggedIn = authState.value != null;
       final isAuthRoute = state.matchedLocation == '/auth';
 
       if (!isLoggedIn && !isAuthRoute) return '/auth';
-      if (isLoggedIn && isAuthRoute) return '/closet';
+      if (isLoggedIn && isAuthRoute) return '/today';
       return null;
     },
     routes: [
