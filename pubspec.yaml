@@ -28,6 +28,7 @@ dependencies:
   image_cropper: any
   image: any
   camera: any
+  google_mlkit_selfie_segmentation: any
 
   # Location & Weather
   geolocator: any

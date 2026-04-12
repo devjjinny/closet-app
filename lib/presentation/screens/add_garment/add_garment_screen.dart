@@ -201,7 +201,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              '밝은 단색 배경에서 촬영하면 배경제거 품질이 높아져요',
+              '입고 찍으면 ML Kit으로 배경 자동 제거 • 흰 배경에 놓고 찍어도 OK',
               style: TextStyle(fontSize: 12, color: Color(0xFF795548)),
             ),
           ),
