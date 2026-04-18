@@ -87,15 +87,8 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
               if (_dominantColor != null) _buildColorPreview(),
               const SizedBox(height: 16),
 
-              // Warmth slider
-              _buildSlider(
-                label: '보온성',
-                value: _warmth,
-                min: 1,
-                max: 5,
-                labels: ['시원함', '보통', '따뜻함'],
-                onChanged: (v) => setState(() => _warmth = v),
-              ),
+              // Warmth selector
+              _buildWarmthSelector(),
               const SizedBox(height: 16),
 
               // Formality slider
@@ -250,6 +243,85 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
         ),
         const SizedBox(width: 8),
         Text(_dominantColor!, style: TextStyle(color: Colors.grey[600])),
+      ],
+    );
+  }
+
+  static const _warmthLabels = ['민소매·반바지', '반팔·면바지', '긴팔·니트', '자켓·야상', '패딩·코트'];
+  static const _warmthTemps = ['28°C~', '20~27°C', '12~19°C', '5~11°C', '~4°C'];
+
+  Widget _buildWarmthSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('보온성', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        Row(
+          children: List.generate(5, (i) {
+            final level = i + 1;
+            final selected = _warmth == level;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _warmth = level),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? const Color(0xFF6C5CE7)
+                        : const Color(0xFF6C5CE7).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected
+                          ? const Color(0xFF6C5CE7)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '$level',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: selected ? Colors.white : Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        // 선택된 레벨 설명
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Text(
+                _warmthTemps[_warmth - 1],
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('·', style: TextStyle(color: Colors.grey[400])),
+              const SizedBox(width: 8),
+              Text(
+                _warmthLabels[_warmth - 1],
+                style: const TextStyle(fontSize: 12, color: Color(0xFF6C5CE7)),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

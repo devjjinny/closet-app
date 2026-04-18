@@ -219,7 +219,95 @@ void main() {
       expect(results.isEmpty, true);
     });
 
-    // Given-When-Then: 10
+    // Given-When-Then: 10 (아우터 기준 12°C)
+    test('체감 12°C에서도 아우터가 포함된다', () {
+      // Given: requiredWarmthBudget == 3 (12~19°C)
+      final garments = [
+        makeGarment(id: 't1', category: GarmentCategory.top, warmth: 3),
+        makeGarment(id: 'b1', category: GarmentCategory.bottom, warmth: 3),
+        makeGarment(id: 'o1', category: GarmentCategory.outer, warmth: 4),
+      ];
+      final weather = makeWeather(feelsLike: 12); // budget == 3
+
+      // When
+      final results = engine.recommend(garments: garments, weather: weather);
+
+      // Then: 12°C에서 아우터 포함
+      expect(results.first.items.containsKey(GarmentCategory.outer), true);
+    });
+
+    // Given-When-Then: 11 (아우터 기준 경계)
+    test('체감 20°C에서는 아우터가 포함되지 않는다', () {
+      // Given: requiredWarmthBudget == 2 (20~27°C)
+      final garments = [
+        makeGarment(id: 't1', category: GarmentCategory.top, warmth: 2),
+        makeGarment(id: 'b1', category: GarmentCategory.bottom, warmth: 2),
+        makeGarment(id: 'o1', category: GarmentCategory.outer, warmth: 4),
+      ];
+      final weather = makeWeather(feelsLike: 20); // budget == 2
+
+      // When
+      final results = engine.recommend(garments: garments, weather: weather);
+
+      // Then: 20°C에서 아우터 없음
+      expect(results.first.items.containsKey(GarmentCategory.outer), false);
+    });
+
+    // Given-When-Then: 12 (reasoning 8단계)
+    test('reasoning 텍스트가 온도 구간에 맞는 아이템 힌트를 포함한다', () {
+      final garments = [
+        makeGarment(id: 't1', category: GarmentCategory.top),
+        makeGarment(id: 'b1', category: GarmentCategory.bottom),
+      ];
+
+      // band 1: 민소매
+      final hot = makeWeather(feelsLike: 30);
+      final hotResult = engine.recommend(garments: garments, weather: hot);
+      expect(hotResult.first.reasoning, contains('민소매'));
+
+      // band 5: 자켓
+      final cool = makeWeather(feelsLike: 14);
+      final coolResult = engine.recommend(garments: garments, weather: cool);
+      expect(coolResult.first.reasoning, contains('자켓'));
+
+      // band 8: 패딩
+      final freezing = makeWeather(feelsLike: 2);
+      final freezingResult = engine.recommend(garments: garments, weather: freezing);
+      expect(freezingResult.first.reasoning, contains('패딩'));
+    });
+
+    // Given-When-Then: 아우터 기준 12°C
+    test('체감 12°C 이하에서 아우터가 포함된다', () {
+      final garments = [
+        makeGarment(id: 't1', category: GarmentCategory.top, warmth: 3),
+        makeGarment(id: 'b1', category: GarmentCategory.bottom, warmth: 3),
+        makeGarment(id: 'o1', category: GarmentCategory.outer, warmth: 4),
+        makeGarment(id: 's1', category: GarmentCategory.shoes, warmth: 2),
+      ];
+
+      // 12°C: requiredWarmthBudget == 3 → 아우터 포함
+      final at12 = engine.recommend(
+        garments: garments,
+        weather: makeWeather(feelsLike: 12),
+      );
+      expect(at12.first.items.containsKey(GarmentCategory.outer), true);
+
+      // 11°C: requiredWarmthBudget == 4 → 아우터 포함
+      final at11 = engine.recommend(
+        garments: garments,
+        weather: makeWeather(feelsLike: 11),
+      );
+      expect(at11.first.items.containsKey(GarmentCategory.outer), true);
+
+      // 20°C: requiredWarmthBudget == 2 → 아우터 미포함
+      final at20 = engine.recommend(
+        garments: garments,
+        weather: makeWeather(feelsLike: 20),
+      );
+      expect(at20.first.items.containsKey(GarmentCategory.outer), false);
+    });
+
+    // Given-When-Then: 13 (결과 점수 정렬)
     test('결과가 점수 내림차순으로 정렬된다', () {
       // Given
       final garments = [

@@ -67,6 +67,22 @@
 - **Phase 1 (MVP)**: 규칙 기반 추천
   - 온도 구간 × 날씨 유형 → 카테고리별 옷 필터링
   - 상의/하의/신발/악세사리 각 1개 무작위 조합
+  - **온도 구간 8단계** (`WeatherSnapshot.temperatureBand`) — 채점은 5단계(`requiredWarmthBudget`), 추천 텍스트는 8단계 사용
+
+  | 구간 | 체감온도 | 권장 아이템 |
+  |------|---------|------------|
+  | 1 | 28°C~ | 민소매, 반팔, 반바지, 원피스 |
+  | 2 | 23~27°C | 반팔, 얇은 셔츠, 면바지 |
+  | 3 | 20~22°C | 얇은 가디건, 긴팔, 청바지 |
+  | 4 | 17~19°C | 얇은 니트, 맨투맨, 가디건 |
+  | 5 | 12~16°C | 자켓, 가디건, 야상, 청바지 |
+  | 6 | 9~11°C | 트렌치코트, 야상, 니트 레이어링 |
+  | 7 | 5~8°C | 히트텍, 니트, 레깅스 |
+  | 8 | ~4°C | 패딩, 두꺼운 코트, 목도리, 기모 |
+
+  - **아우터 추가 기준**: `requiredWarmthBudget >= 3` (체감 12°C 이하부터 outer 추천)
+  - 채점 기준: warmth 일치도 +15 / 방수 ±10 / 스타일 태그 +5/개 / 색상 조화 +8 / 최근 패널티 -15
+
 - **Phase 2 (v1.1)**: LLM 보조 추천
   - Claude Haiku 4.5 API 사용 (최저 비용)
   - 사용자 옷 목록 + 날씨 컨텍스트 → 추천 근거 포함
@@ -129,7 +145,28 @@
 ### GarmentModel (기존 확장)
 ```
 id, userId, name, category (top/bottom/outer/dress/shoes/bag/accessory),
-imageUrl (배경제거), thumbnailUrl, color, createdAt
+imageUrl (배경제거), thumbnailUrl, dominantHex,
+warmth (1-5: 1=민소매 ~ 5=패딩),   // 채점용 보온도
+formality (1-5), waterproof (bool),
+styleTags (office/date/sport/travel/casual/formal),
+seasonTags, createdAt
+```
+
+**warmth 가이드라인** (등록 시 사용자 입력 기준):
+
+| warmth | 해당 아이템 예시 |
+|--------|----------------|
+| 1 | 민소매, 크롭탑, 반바지 |
+| 2 | 반팔 티셔츠, 얇은 셔츠, 면바지 |
+| 3 | 긴팔, 얇은 니트, 맨투맨, 가디건 |
+| 4 | 자켓, 야상, 트렌치코트, 두꺼운 니트 |
+| 5 | 패딩, 두꺼운 코트, 기모 제품 |
+
+### WeatherSnapshot
+```
+temp, feelsLike, humidity, windSpeed, precipProb, condition,
+requiredWarmthBudget (1-5, 채점용),   // feelsLike >= 28→1 … <5→5
+temperatureBand (1-8, 추천 텍스트용)  // 이미지 기준 8단계 세분화
 ```
 
 ### OutfitModel (기존 확장)
@@ -190,7 +227,8 @@ lib/
 
 | 레이어 | 전략 |
 |--------|------|
-| 추천 엔진 | Unit test — 온도 구간별 추천 결과 검증 |
+| 추천 엔진 | Unit test — 8단계 temperatureBand별 reasoning 텍스트, 아우터 추가 기준(12°C), 채점 로직 |
+| WeatherSnapshot | Unit test — requiredWarmthBudget(5단계) / temperatureBand(8단계) 경계값 검증 |
 | Repository | Mock Firestore로 CRUD 검증 |
 | 날씨 서비스 | Mock HTTP로 파싱 검증 |
 | UI | Widget test (홈, 옷장 화면 핵심 상태) |

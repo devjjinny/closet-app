@@ -103,5 +103,30 @@ void main() {
       expect(snowy.isSnowy, true);
       expect(snowy.needsWaterproof, true);
     });
+
+    // Given-When-Then: 16
+    test('temperatureBand가 8단계 경계값을 올바르게 반환한다', () {
+      WeatherSnapshot w(double feels) => WeatherSnapshot(
+            provider: 'test', temp: feels, feelsLike: feels,
+            humidity: 50, windSpeed: 5, precipProb: 0, condition: 'Clear',
+          );
+
+      expect(w(30).temperatureBand, 1);  // 28°C 이상
+      expect(w(28).temperatureBand, 1);  // 경계 포함
+      expect(w(27).temperatureBand, 2);  // 23~27°C
+      expect(w(23).temperatureBand, 2);  // 경계 포함
+      expect(w(22).temperatureBand, 3);  // 20~22°C
+      expect(w(20).temperatureBand, 3);  // 경계 포함
+      expect(w(19).temperatureBand, 4);  // 17~19°C
+      expect(w(17).temperatureBand, 4);  // 경계 포함
+      expect(w(16).temperatureBand, 5);  // 12~16°C
+      expect(w(12).temperatureBand, 5);  // 경계 포함
+      expect(w(11).temperatureBand, 6);  // 9~11°C
+      expect(w(9).temperatureBand, 6);   // 경계 포함
+      expect(w(8).temperatureBand, 7);   // 5~8°C
+      expect(w(5).temperatureBand, 7);   // 경계 포함
+      expect(w(4).temperatureBand, 8);   // 4°C 이하
+      expect(w(-10).temperatureBand, 8); // 극한 추위
+    });
   });
 }
