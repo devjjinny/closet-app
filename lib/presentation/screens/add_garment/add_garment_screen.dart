@@ -336,6 +336,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
       ),
     );
     if (source == null) return;
+    if (!mounted) return;
 
     File? imageFile;
     if (source == ImageSource.camera &&

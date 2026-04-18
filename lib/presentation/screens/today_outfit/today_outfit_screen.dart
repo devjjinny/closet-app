@@ -1,12 +1,13 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/enums.dart';
 import '../../../data/models/outfit_model.dart';
+import '../../widgets/async_widgets.dart';
+import '../../widgets/character_widget.dart';
 import '../../../data/models/weather_snapshot.dart';
-import '../../../services/recommendation/recommendation_engine.dart';
 import '../../providers/providers.dart';
+import '../../widgets/collage_preview.dart';
 
 class TodayOutfitScreen extends ConsumerStatefulWidget {
   const TodayOutfitScreen({super.key});
@@ -21,26 +22,34 @@ class _TodayOutfitScreenState extends ConsumerState<TodayOutfitScreen> {
   @override
   Widget build(BuildContext context) {
     final weatherAsync = ref.watch(currentWeatherProvider);
-    final recommendAsync = ref.watch(recommendationsProvider(null));
+    final recommendAsync = ref.watch(recommendationsProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
         child: weatherAsync.when(
-          loading: () => const _LoadingView(),
+          loading: () => const AppLoadingWidget(message: '날씨 확인 중...'),
           error: (_, __) => _HomeBody(
             weather: WeatherSnapshot.fallback(),
             recommendAsync: recommendAsync,
             candidateIndex: _candidateIndex,
+            selectedTag: ref.watch(stylePreferenceProvider).selectedTag,
+            onTagSelected: _onTagSelected,
             onNextOutfit: _nextOutfit,
             onSave: _saveOutfit,
+            onRetryRecommend: () => ref.refresh(recommendationsProvider),
+            onRefreshWeather: () => ref.refresh(currentWeatherProvider),
           ),
           data: (weather) => _HomeBody(
             weather: weather,
             recommendAsync: recommendAsync,
             candidateIndex: _candidateIndex,
+            selectedTag: ref.watch(stylePreferenceProvider).selectedTag,
+            onTagSelected: _onTagSelected,
             onNextOutfit: _nextOutfit,
             onSave: _saveOutfit,
+            onRetryRecommend: () => ref.refresh(recommendationsProvider),
+            onRefreshWeather: () => ref.refresh(currentWeatherProvider),
           ),
         ),
       ),
@@ -49,6 +58,14 @@ class _TodayOutfitScreenState extends ConsumerState<TodayOutfitScreen> {
 
   void _nextOutfit(int total) {
     setState(() => _candidateIndex = (_candidateIndex + 1) % total);
+  }
+
+  void _onTagSelected(StyleTag? tag) {
+    final notifier = ref.read(stylePreferenceProvider.notifier);
+    final current = ref.read(stylePreferenceProvider).selectedTag;
+    // 같은 태그 다시 탭하면 해제
+    notifier.setTag(tag == current ? null : tag);
+    setState(() => _candidateIndex = 0);
   }
 
   Future<void> _saveOutfit(OutfitCandidate candidate) async {
@@ -60,6 +77,14 @@ class _TodayOutfitScreenState extends ConsumerState<TodayOutfitScreen> {
     final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     try {
+      // cutout URL로 콜라주 PNG 생성
+      final cutoutUrls = candidate.items.map(
+        (cat, garment) => MapEntry(cat, garment.image.cutoutUrl),
+      );
+      final collageFile = await ref
+          .read(collageServiceProvider)
+          .generateCollageFromUrls(cutoutUrls);
+
       final outfit = OutfitModel(
         id: '',
         dateKey: dateKey,
@@ -68,7 +93,11 @@ class _TodayOutfitScreenState extends ConsumerState<TodayOutfitScreen> {
         createdAt: DateTime.now(),
         reasoning: candidate.reasoning,
       );
-      await ref.read(outfitRepositoryProvider).saveOutfit(uid: uid, outfit: outfit);
+      await ref.read(outfitRepositoryProvider).saveOutfit(
+            uid: uid,
+            outfit: outfit,
+            collageFile: collageFile,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,36 +123,45 @@ class _HomeBody extends StatelessWidget {
     required this.weather,
     required this.recommendAsync,
     required this.candidateIndex,
+    required this.selectedTag,
+    required this.onTagSelected,
     required this.onNextOutfit,
     required this.onSave,
+    required this.onRetryRecommend,
+    required this.onRefreshWeather,
   });
 
   final WeatherSnapshot weather;
   final AsyncValue<List<OutfitCandidate>> recommendAsync;
   final int candidateIndex;
+  final StyleTag? selectedTag;
+  final void Function(StyleTag?) onTagSelected;
   final void Function(int total) onNextOutfit;
   final Future<void> Function(OutfitCandidate) onSave;
+  final VoidCallback onRetryRecommend;
+  final VoidCallback onRefreshWeather;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 상단: 날씨
-        _WeatherBar(weather: weather),
-
-        // 중앙: 캐릭터 영역 (추후 Rive 교체)
-        const Expanded(
-          flex: 5,
-          child: _CharacterArea(),
+        GestureDetector(
+          onTap: onRefreshWeather,
+          child: _WeatherBar(weather: weather),
         ),
 
-        // 하단: 코디 + 버튼
+        _StyleTagRow(selectedTag: selectedTag, onTagSelected: onTagSelected),
+
+        Expanded(
+          flex: 5,
+          child: CharacterWidget(weather: weather),
+        ),
+
         Expanded(
           flex: 4,
-          child: recommendAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('추천 오류: $e')),
-            data: (candidates) {
+          child: recommendAsync.buildWidget(
+            onRetry: onRetryRecommend,
+            onData: (candidates) {
               if (candidates.isEmpty) {
                 return const _EmptyOutfitPanel();
               }
@@ -137,6 +175,58 @@ class _HomeBody extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StyleTagRow extends StatelessWidget {
+  const _StyleTagRow({required this.selectedTag, required this.onTagSelected});
+
+  final StyleTag? selectedTag;
+  final void Function(StyleTag?) onTagSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        children: StyleTag.values.map((tag) {
+          final selected = selectedTag == tag;
+          return Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: GestureDetector(
+              onTap: () => onTagSelected(tag),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF6C5CE7)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: selected
+                        ? const Color(0xFF6C5CE7)
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                child: Text(
+                  tag.label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: selected ? Colors.white : Colors.grey[600],
+                    fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
@@ -261,39 +351,6 @@ class _WeatherBadge extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────
-// 캐릭터 영역 (Placeholder → #04에서 Rive로 교체)
-// ──────────────────────────────────────────────────────────
-
-class _CharacterArea extends StatelessWidget {
-  const _CharacterArea();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 200,
-        height: 260,
-        decoration: BoxDecoration(
-          color: const Color(0xFFEEEBFB),
-          borderRadius: BorderRadius.circular(120),
-        ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person, size: 100, color: Color(0xFF6C5CE7)),
-            SizedBox(height: 8),
-            Text(
-              '캐릭터 준비 중',
-              style: TextStyle(fontSize: 12, color: Color(0xFF6C5CE7)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────────────────
 // 코디 패널
 // ──────────────────────────────────────────────────────────
 
@@ -336,46 +393,9 @@ class _OutfitPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // 옷 아이템 미리보기
-          SizedBox(
-            height: 72,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: candidate.items.entries.map((entry) {
-                final garment = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: garment.image.thumbUrl.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: CachedNetworkImage(
-                                  imageUrl: garment.image.thumbUrl,
-                                  fit: BoxFit.cover,
-                                ),
-                              )
-                            : const Icon(Icons.checkroom, size: 22, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        garment.name ?? entry.key.label,
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const Spacer(),
+          // 콜라주 미리보기
+          CollagePreviewWidget(items: candidate.items, height: 200),
+          const SizedBox(height: 12),
 
           // 버튼
           Row(
@@ -443,24 +463,3 @@ class _EmptyOutfitPanel extends StatelessWidget {
   }
 }
 
-// ──────────────────────────────────────────────────────────
-// 로딩 뷰
-// ──────────────────────────────────────────────────────────
-
-class _LoadingView extends StatelessWidget {
-  const _LoadingView();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(color: Color(0xFF6C5CE7)),
-          SizedBox(height: 16),
-          Text('날씨 확인 중...', style: TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-}

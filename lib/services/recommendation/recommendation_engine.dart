@@ -54,8 +54,8 @@ class RecommendationEngine {
           GarmentCategory.bottom: bottom,
         };
 
-        // Add outer if cold
-        if (weather.requiredWarmthBudget >= 4 && outers.isNotEmpty) {
+        // Add outer if cool or cold (12°C 이하부터 아우터 추천)
+        if (weather.requiredWarmthBudget >= 3 && outers.isNotEmpty) {
           final bestOuter = _bestOuter(outers, weather, styleTag);
           if (bestOuter != null) {
             combo[GarmentCategory.outer] = bestOuter;
@@ -87,7 +87,7 @@ class RecommendationEngine {
         GarmentCategory.dress: dress,
       };
 
-      if (weather.requiredWarmthBudget >= 4 && outers.isNotEmpty) {
+      if (weather.requiredWarmthBudget >= 3 && outers.isNotEmpty) {
         final bestOuter = _bestOuter(outers, weather, styleTag);
         if (bestOuter != null) {
           combo[GarmentCategory.outer] = bestOuter;
@@ -317,19 +317,26 @@ class RecommendationEngine {
     double score,
   ) {
     final parts = <String>[];
-
-    // Weather description
     final temp = weather.feelsLike.round();
-    if (temp >= 28) {
-      parts.add('체감온도 $temp°C로 무더운 날씨예요');
-    } else if (temp >= 20) {
-      parts.add('체감온도 $temp°C로 따뜻한 날씨예요');
-    } else if (temp >= 12) {
-      parts.add('체감온도 $temp°C로 선선한 날씨예요');
-    } else if (temp >= 5) {
-      parts.add('체감온도 $temp°C로 쌀쌀한 날씨예요');
-    } else {
-      parts.add('체감온도 $temp°C로 매우 추운 날씨예요');
+
+    // 8단계 온도 구간별 날씨 설명 + 권장 아이템 힌트
+    switch (weather.temperatureBand) {
+      case 1:
+        parts.add('체감온도 $temp°C, 무더운 날이에요. 민소매·반팔·반바지가 딱 맞아요');
+      case 2:
+        parts.add('체감온도 $temp°C, 더운 날이에요. 반팔·얇은 셔츠·면바지가 좋아요');
+      case 3:
+        parts.add('체감온도 $temp°C, 따뜻한 날이에요. 얇은 가디건이나 긴팔을 챙기세요');
+      case 4:
+        parts.add('체감온도 $temp°C, 선선해요. 얇은 니트나 맨투맨이 적당해요');
+      case 5:
+        parts.add('체감온도 $temp°C, 쌀쌀해요. 자켓이나 가디건·야상이 어울려요');
+      case 6:
+        parts.add('체감온도 $temp°C, 춥네요. 트렌치코트나 야상에 니트 레이어링을 추천해요');
+      case 7:
+        parts.add('체감온도 $temp°C, 많이 추워요. 히트텍·니트·레깅스로 따뜻하게 입으세요');
+      default:
+        parts.add('체감온도 $temp°C, 매우 추운 날이에요. 패딩·두꺼운 코트·목도리가 필수예요');
     }
 
     // Rain/snow

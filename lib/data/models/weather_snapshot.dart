@@ -25,13 +25,26 @@ class WeatherSnapshot {
   bool get isSnowy => snowMm != null && snowMm! > 0;
   bool get needsWaterproof => precipProb > 0.5 || isRainy || isSnowy;
 
-  /// 체감온도 기반 warmth 구간 (1=매우 더움 ~ 5=매우 추움)
+  /// 체감온도 기반 warmth 구간 (1=매우 더움 ~ 5=매우 추움) — 채점용
   int get requiredWarmthBudget {
     if (feelsLike >= 28) return 1;
     if (feelsLike >= 20) return 2;
     if (feelsLike >= 12) return 3;
     if (feelsLike >= 5) return 4;
     return 5;
+  }
+
+  /// 체감온도 기반 세부 구간 (1=최고온 ~ 8=최저온) — 추천 텍스트 생성용
+  /// 이미지 기준: 28↑ / 23~27 / 20~22 / 17~19 / 12~16 / 9~11 / 5~8 / ~4
+  int get temperatureBand {
+    if (feelsLike >= 28) return 1;
+    if (feelsLike >= 23) return 2;
+    if (feelsLike >= 20) return 3;
+    if (feelsLike >= 17) return 4;
+    if (feelsLike >= 12) return 5;
+    if (feelsLike >= 9) return 6;
+    if (feelsLike >= 5) return 7;
+    return 8;
   }
 
   factory WeatherSnapshot.fromMap(Map<String, dynamic> map) {

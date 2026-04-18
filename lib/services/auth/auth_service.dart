@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/constants/enums.dart';
 import '../../data/models/user_model.dart';
 
 class AuthService {
@@ -31,6 +32,16 @@ class AuthService {
     }
 
     return user;
+  }
+
+  /// 성별 저장 (Firestore prefs 업데이트)
+  Future<void> saveGender(Gender gender) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    await _firestore.collection('users').doc(user.uid).set(
+      {'prefs': UserPrefs(gender: gender).toMap()},
+      SetOptions(merge: true),
+    );
   }
 
   /// 로그아웃

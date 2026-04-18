@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'presentation/providers/providers.dart';
-import 'presentation/screens/auth/auth_screen.dart';
+import 'presentation/screens/onboarding/onboarding_screen.dart';
 import 'presentation/screens/closet/closet_screen.dart';
 import 'presentation/screens/add_garment/add_garment_screen.dart';
 import 'presentation/screens/today_outfit/today_outfit_screen.dart';
@@ -9,22 +9,25 @@ import 'presentation/screens/history/history_screen.dart';
 import 'presentation/screens/shell_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final onboardingAsync = ref.watch(onboardingCompleteProvider);
 
   return GoRouter(
     initialLocation: '/today',
     redirect: (context, state) {
-      final isLoggedIn = authState.value != null;
-      final isAuthRoute = state.matchedLocation == '/auth';
+      // 온보딩 로딩 중 → 이동 없음
+      if (onboardingAsync.isLoading) return null;
 
-      if (!isLoggedIn && !isAuthRoute) return '/auth';
-      if (isLoggedIn && isAuthRoute) return '/today';
+      final isOnboardingDone = onboardingAsync.value ?? false;
+      final isOnboardingRoute = state.matchedLocation == '/onboarding';
+
+      if (!isOnboardingDone && !isOnboardingRoute) return '/onboarding';
+      if (isOnboardingDone && isOnboardingRoute) return '/today';
       return null;
     },
     routes: [
       GoRoute(
-        path: '/auth',
-        builder: (context, state) => const AuthScreen(),
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

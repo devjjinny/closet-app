@@ -78,3 +78,17 @@ enum Season {
 enum OutfitFeedback { like, dislike }
 
 enum UnitSystem { metric, imperial }
+
+enum Gender {
+  male,
+  female;
+
+  String get label {
+    switch (this) {
+      case Gender.male:
+        return '남성';
+      case Gender.female:
+        return '여성';
+    }
+  }
+}

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/enums.dart';
 import '../../../data/models/garment_model.dart';
 import '../../providers/providers.dart';
+import '../../widgets/async_widgets.dart';
 
 class ClosetScreen extends ConsumerStatefulWidget {
   const ClosetScreen({super.key});
@@ -54,10 +55,9 @@ class _ClosetScreenState extends ConsumerState<ClosetScreen> {
           ),
           // Garment grid
           Expanded(
-            child: garmentsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('오류: $e')),
-              data: (garments) {
+            child: garmentsAsync.buildWidget(
+              onRetry: () => ref.refresh(garmentsStreamProvider),
+              onData: (garments) {
                 final filtered = _selectedCategory != null
                     ? garments
                         .where((g) => g.category == _selectedCategory)
