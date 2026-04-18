@@ -247,8 +247,22 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     );
   }
 
-  static const _warmthLabels = ['민소매·반바지', '반팔·면바지', '긴팔·니트', '자켓·야상', '패딩·코트'];
+  static const _warmthColors = [
+    Color(0xFFFF6B6B), // 1 — 더움
+    Color(0xFFFFB347), // 2
+    Color(0xFF74b9ff), // 3
+    Color(0xFF6C5CE7), // 4
+    Color(0xFF2d3436), // 5 — 추움
+  ];
+  static const _warmthIcons = ['☀️', '🌤️', '🍃', '🧥', '❄️'];
   static const _warmthTemps = ['28°C~', '20~27°C', '12~19°C', '5~11°C', '~4°C'];
+  static const _warmthExamples = [
+    '민소매, 크롭탑, 반바지',
+    '반팔 티셔츠, 얇은 셔츠, 면바지',
+    '긴팔, 얇은 니트, 맨투맨, 가디건',
+    '자켓, 야상, 트렌치코트, 두꺼운 니트',
+    '패딩, 두꺼운 코트, 기모 제품',
+  ];
 
   Widget _buildWarmthSelector() {
     return Column(
@@ -260,6 +274,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
           children: List.generate(5, (i) {
             final level = i + 1;
             final selected = _warmth == level;
+            final color = _warmthColors[i];
             return Expanded(
               child: GestureDetector(
                 onTap: () => setState(() => _warmth = level),
@@ -268,23 +283,23 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: selected
-                        ? const Color(0xFF6C5CE7)
-                        : const Color(0xFF6C5CE7).withValues(alpha: 0.08),
+                    color: selected ? color : color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: selected
-                          ? const Color(0xFF6C5CE7)
-                          : Colors.transparent,
+                      color: selected ? color : Colors.transparent,
+                      width: 2,
                     ),
                   ),
                   child: Column(
                     children: [
+                      Text(_warmthIcons[i], style: const TextStyle(fontSize: 16)),
+                      const SizedBox(height: 2),
                       Text(
                         '$level',
                         style: TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: selected ? Colors.white : Colors.grey[700],
+                          color: selected ? Colors.white : color,
                         ),
                       ),
                     ],
@@ -295,31 +310,37 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
           }),
         ),
         const SizedBox(height: 8),
-        // 선택된 레벨 설명
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Text(
-                _warmthTemps[_warmth - 1],
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 150),
+          child: Container(
+            key: ValueKey(_warmth),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: _warmthColors[_warmth - 1].withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _warmthColors[_warmth - 1].withValues(alpha: 0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _warmthTemps[_warmth - 1],
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _warmthColors[_warmth - 1],
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text('·', style: TextStyle(color: Colors.grey[400])),
-              const SizedBox(width: 8),
-              Text(
-                _warmthLabels[_warmth - 1],
-                style: const TextStyle(fontSize: 12, color: Color(0xFF6C5CE7)),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  _warmthExamples[_warmth - 1],
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                ),
+              ],
+            ),
           ),
         ),
       ],
