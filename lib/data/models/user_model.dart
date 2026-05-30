@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/enums.dart';
 
 class UserPrefs {
@@ -6,17 +5,11 @@ class UserPrefs {
     this.units = UnitSystem.metric,
     this.gender,
     this.defaultStyleTag,
-    this.locationCity,
-    this.lastKnownLat,
-    this.lastKnownLon,
   });
 
   final UnitSystem units;
   final Gender? gender;
   final StyleTag? defaultStyleTag;
-  final String? locationCity;
-  final double? lastKnownLat;
-  final double? lastKnownLon;
 
   factory UserPrefs.fromMap(Map<String, dynamic> map) {
     return UserPrefs(
@@ -36,9 +29,6 @@ class UserPrefs {
               orElse: () => StyleTag.casual,
             )
           : null,
-      locationCity: map['locationCity'] as String?,
-      lastKnownLat: (map['lastKnownLat'] as num?)?.toDouble(),
-      lastKnownLon: (map['lastKnownLon'] as num?)?.toDouble(),
     );
   }
 
@@ -46,44 +36,11 @@ class UserPrefs {
         units: units,
         gender: gender ?? this.gender,
         defaultStyleTag: defaultStyleTag,
-        locationCity: locationCity,
-        lastKnownLat: lastKnownLat,
-        lastKnownLon: lastKnownLon,
       );
 
   Map<String, dynamic> toMap() => {
         'units': units.name,
         if (gender != null) 'gender': gender!.name,
         if (defaultStyleTag != null) 'defaultStyleTag': defaultStyleTag!.name,
-        if (locationCity != null) 'locationCity': locationCity,
-        if (lastKnownLat != null) 'lastKnownLat': lastKnownLat,
-        if (lastKnownLon != null) 'lastKnownLon': lastKnownLon,
-      };
-}
-
-class UserModel {
-  const UserModel({
-    required this.uid,
-    required this.createdAt,
-    this.prefs = const UserPrefs(),
-  });
-
-  final String uid;
-  final DateTime createdAt;
-  final UserPrefs prefs;
-
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return UserModel(
-      uid: doc.id,
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      prefs: UserPrefs.fromMap(data['prefs'] as Map<String, dynamic>? ?? {}),
-    );
-  }
-
-  Map<String, dynamic> toFirestore() => {
-        'createdAt': FieldValue.serverTimestamp(),
-        'prefs': prefs.toMap(),
       };
 }

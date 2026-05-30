@@ -3,9 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/screens/onboarding/onboarding_screen.dart';
 import 'presentation/screens/closet/closet_screen.dart';
+import 'presentation/screens/add_garment/bulk_add_garments_screen.dart';
 import 'presentation/screens/add_garment/add_garment_screen.dart';
+import 'presentation/screens/save_outfit/ootd_pin_save_screen.dart';
+import 'presentation/screens/save_outfit/save_outfit_screen.dart';
 import 'presentation/screens/today_outfit/today_outfit_screen.dart';
 import 'presentation/screens/history/history_screen.dart';
+import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/screens/shell_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -57,11 +61,31 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
         path: '/add-garment',
         builder: (context, state) => const AddGarmentScreen(),
+      ),
+      GoRoute(
+        path: '/add-garments-bulk',
+        builder: (context, state) => const BulkAddGarmentsScreen(),
+      ),
+      GoRoute(
+        path: '/save-outfit',
+        builder: (context, state) => const SaveOutfitScreen(),
+      ),
+      GoRoute(
+        path: '/save-ootd',
+        builder: (context, state) => const OotdPinSaveScreen(),
       ),
     ],
   );

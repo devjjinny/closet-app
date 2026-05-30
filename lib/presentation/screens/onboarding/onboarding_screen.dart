@@ -22,7 +22,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_selected == null || _loading) return;
     setState(() => _loading = true);
     try {
-      await ref.read(authServiceProvider).saveGender(_selected!);
+      await ref.read(userPrefsProvider.notifier).saveGender(_selected!);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kOnboardingKey, true);
       ref.invalidate(onboardingCompleteProvider);

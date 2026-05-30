@@ -1,140 +1,104 @@
+import 'dart:async';
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/constants/enums.dart';
 import '../models/garment_model.dart';
-import '../../services/storage/firebase_storage_service.dart';
+import '../../services/database/local_database.dart';
+import '../../services/storage/local_storage_service.dart';
 
 class GarmentRepository {
-  GarmentRepository({
-    FirebaseFirestore? firestore,
-    FirebaseStorageService? storage,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorageService();
+  GarmentRepository({LocalStorageService? storage})
+      : _storage = storage ?? LocalStorageService();
 
-  final FirebaseFirestore _firestore;
-  final FirebaseStorageService _storage;
+  final LocalStorageService _storage;
+  final _controller = StreamController<List<GarmentModel>>.broadcast();
 
-  CollectionReference<Map<String, dynamic>> _collection(String uid) =>
-      _firestore.collection('users').doc(uid).collection('garments');
-
-  /// 옷장 아이템 스트림 (실시간)
-  Stream<List<GarmentModel>> watchGarments(String uid) {
-    return _collection(uid)
-        .where('status', isEqualTo: GarmentStatus.active.name)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => GarmentModel.fromFirestore(doc)).toList());
+  Stream<List<GarmentModel>> watchGarments() {
+    _emitAll();
+    return _controller.stream;
   }
 
-  /// 모든 active 아이템 가져오기 (한 번)
-  Future<List<GarmentModel>> getActiveGarments(String uid) async {
-    final snapshot = await _collection(uid)
-        .where('status', isEqualTo: GarmentStatus.active.name)
-        .get();
-    return snapshot.docs
-        .map((doc) => GarmentModel.fromFirestore(doc))
-        .toList();
+  Future<List<GarmentModel>> getActiveGarments() async {
+    final db = await LocalDatabase.instance.db;
+    final rows = await db.query(
+      'garments',
+      where: 'status = ?',
+      whereArgs: [GarmentStatus.active.name],
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(GarmentModel.fromRow).toList();
   }
 
-  /// 카테고리 필터
-  Future<List<GarmentModel>> getGarmentsByCategory(
-    String uid,
-    GarmentCategory category,
-  ) async {
-    final snapshot = await _collection(uid)
-        .where('status', isEqualTo: GarmentStatus.active.name)
-        .where('category', isEqualTo: category.name)
-        .get();
-    return snapshot.docs
-        .map((doc) => GarmentModel.fromFirestore(doc))
-        .toList();
-  }
-
-  /// 옷 등록 (이미지 업로드 + Firestore 문서 생성)
   Future<GarmentModel> addGarment({
-    required String uid,
     required GarmentModel garment,
     required File originalFile,
     required File cutoutFile,
     required File thumbFile,
     void Function(String step, double progress)? onProgress,
   }) async {
-    // Create document first to get ID
-    final docRef = _collection(uid).doc();
-    final garmentId = docRef.id;
+    final id = LocalStorageService.newId();
 
-    // Upload images in sequence (each depends on getting URL)
-    onProgress?.call('원본 업로드 중...', 0.0);
-    final originalUrl = await _storage.uploadFile(
-      path: AppConstants.garmentOriginalPath(uid, garmentId),
-      file: originalFile,
-      contentType: 'image/jpeg',
-      onProgress: (p) => onProgress?.call('원본 업로드 중...', p * 0.3),
-    );
+    onProgress?.call('원본 저장 중...', 0.1);
+    final originalPath = await _storage.saveGarmentImage(
+        file: originalFile, garmentId: id, type: 'original');
 
-    onProgress?.call('배경제거 이미지 업로드 중...', 0.3);
-    final cutoutUrl = await _storage.uploadFile(
-      path: AppConstants.garmentCutoutPath(uid, garmentId),
-      file: cutoutFile,
-      contentType: 'image/png',
-      onProgress: (p) => onProgress?.call('배경제거 이미지 업로드 중...', 0.3 + p * 0.3),
-    );
+    onProgress?.call('배경제거 이미지 저장 중...', 0.4);
+    final cutoutPath = await _storage.saveGarmentImage(
+        file: cutoutFile, garmentId: id, type: 'cutout');
 
-    onProgress?.call('썸네일 업로드 중...', 0.6);
-    final thumbUrl = await _storage.uploadFile(
-      path: AppConstants.garmentThumbPath(uid, garmentId),
-      file: thumbFile,
-      contentType: 'image/webp',
-      onProgress: (p) => onProgress?.call('썸네일 업로드 중...', 0.6 + p * 0.2),
-    );
-
-    onProgress?.call('저장 중...', 0.8);
-
-    final image = GarmentImage(
-      originalUrl: originalUrl,
-      cutoutUrl: cutoutUrl,
-      thumbUrl: thumbUrl,
-    );
+    onProgress?.call('썸네일 저장 중...', 0.7);
+    final thumbPath = await _storage.saveGarmentImage(
+        file: thumbFile, garmentId: id, type: 'thumb');
 
     final newGarment = garment.copyWith(
-      id: garmentId,
-      image: image,
+      id: id,
+      image: GarmentImage(
+        originalPath: originalPath,
+        cutoutPath: cutoutPath,
+        thumbPath: thumbPath,
+      ),
     );
 
-    await docRef.set(newGarment.toFirestore());
-
+    final db = await LocalDatabase.instance.db;
+    await db.insert('garments', newGarment.toRow());
     onProgress?.call('완료!', 1.0);
+
+    _emitAll();
     return newGarment;
   }
 
-  /// 옷 수정
-  Future<void> updateGarment(String uid, GarmentModel garment) async {
-    await _collection(uid).doc(garment.id).update({
-      ...garment.toFirestore(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+  Future<void> updateGarment(GarmentModel garment) async {
+    final db = await LocalDatabase.instance.db;
+    await db.update(
+      'garments',
+      garment.copyWith(updatedAt: DateTime.now()).toRow(),
+      where: 'id = ?',
+      whereArgs: [garment.id],
+    );
+    _emitAll();
   }
 
-  /// 옷 보관 (soft delete)
-  Future<void> archiveGarment(String uid, String garmentId) async {
-    await _collection(uid).doc(garmentId).update({
-      'status': GarmentStatus.archived.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+  Future<void> archiveGarment(String garmentId) async {
+    final db = await LocalDatabase.instance.db;
+    final rows = await db.query('garments', where: 'id = ?', whereArgs: [garmentId]);
+    if (rows.isEmpty) return;
+    final garment = GarmentModel.fromRow(rows.first)
+        .copyWith(status: GarmentStatus.archived, updatedAt: DateTime.now());
+    await db.update('garments', garment.toRow(),
+        where: 'id = ?', whereArgs: [garmentId]);
+    _emitAll();
   }
 
-  /// 옷 삭제 (hard delete + storage 정리)
-  Future<void> deleteGarment(String uid, String garmentId) async {
-    // Delete storage files
-    await Future.wait([
-      _storage.deleteFile(AppConstants.garmentOriginalPath(uid, garmentId)),
-      _storage.deleteFile(AppConstants.garmentCutoutPath(uid, garmentId)),
-      _storage.deleteFile(AppConstants.garmentThumbPath(uid, garmentId)),
-    ]);
-
-    // Delete Firestore document
-    await _collection(uid).doc(garmentId).delete();
+  Future<void> deleteGarment(String garmentId) async {
+    await _storage.deleteGarmentFiles(garmentId);
+    final db = await LocalDatabase.instance.db;
+    await db.delete('garments', where: 'id = ?', whereArgs: [garmentId]);
+    _emitAll();
   }
+
+  Future<void> _emitAll() async {
+    final garments = await getActiveGarments();
+    _controller.add(garments);
+  }
+
+  void dispose() => _controller.close();
 }

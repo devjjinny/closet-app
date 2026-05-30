@@ -1,35 +1,35 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 import '../../core/constants/enums.dart';
 
 class GarmentImage {
   const GarmentImage({
-    required this.originalUrl,
-    required this.cutoutUrl,
-    required this.thumbUrl,
+    required this.originalPath,
+    required this.cutoutPath,
+    required this.thumbPath,
     this.width,
     this.height,
   });
 
-  final String originalUrl;
-  final String cutoutUrl;
-  final String thumbUrl;
+  final String originalPath;
+  final String cutoutPath;
+  final String thumbPath;
   final int? width;
   final int? height;
 
   factory GarmentImage.fromMap(Map<String, dynamic> map) {
     return GarmentImage(
-      originalUrl: map['originalUrl'] as String? ?? '',
-      cutoutUrl: map['cutoutUrl'] as String? ?? '',
-      thumbUrl: map['thumbUrl'] as String? ?? '',
+      originalPath: map['originalPath'] as String? ?? '',
+      cutoutPath: map['cutoutPath'] as String? ?? '',
+      thumbPath: map['thumbPath'] as String? ?? '',
       width: map['width'] as int?,
       height: map['height'] as int?,
     );
   }
 
   Map<String, dynamic> toMap() => {
-        'originalUrl': originalUrl,
-        'cutoutUrl': cutoutUrl,
-        'thumbUrl': thumbUrl,
+        'originalPath': originalPath,
+        'cutoutPath': cutoutPath,
+        'thumbPath': thumbPath,
         if (width != null) 'width': width,
         if (height != null) 'height': height,
       };
@@ -57,10 +57,10 @@ class GarmentModel {
 
   final String id;
   final GarmentCategory category;
-  final String? name; // 사용자가 지정한 옷 이름 (예: "흰 린넨 셔츠")
+  final String? name;
   final String dominantHex;
-  final int warmth; // 1-5
-  final int formality; // 1-5
+  final int warmth;
+  final int formality;
   final bool waterproof;
   final GarmentImage image;
   final DateTime createdAt;
@@ -72,64 +72,68 @@ class GarmentModel {
   final List<StyleTag> styleTags;
   final String? notes;
 
-  factory GarmentModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory GarmentModel.fromRow(Map<String, dynamic> row) {
     return GarmentModel(
-      id: doc.id,
+      id: row['id'] as String,
       category: GarmentCategory.values.firstWhere(
-        (e) => e.name == data['category'],
+        (e) => e.name == row['category'],
         orElse: () => GarmentCategory.top,
       ),
-      dominantHex: data['dominantHex'] as String? ?? '#000000',
-      warmth: (data['warmth'] as num?)?.toInt() ?? 3,
-      formality: (data['formality'] as num?)?.toInt() ?? 3,
-      waterproof: data['waterproof'] as bool? ?? false,
-      image: GarmentImage.fromMap(
-          data['image'] as Map<String, dynamic>? ?? {}),
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      name: row['name'] as String?,
+      dominantHex: row['dominant_hex'] as String? ?? '#000000',
+      warmth: row['warmth'] as int? ?? 3,
+      formality: row['formality'] as int? ?? 3,
+      waterproof: (row['waterproof'] as int? ?? 0) == 1,
+      image: GarmentImage(
+        originalPath: row['original_path'] as String? ?? '',
+        cutoutPath: row['cutout_path'] as String? ?? '',
+        thumbPath: row['thumb_path'] as String? ?? '',
+      ),
       status: GarmentStatus.values.firstWhere(
-        (e) => e.name == data['status'],
+        (e) => e.name == row['status'],
         orElse: () => GarmentStatus.active,
       ),
-      subCategory: data['subCategory'] as String?,
-      palette: List<String>.from(data['palette'] ?? []),
-      seasonTags: (data['seasonTags'] as List<dynamic>?)
-              ?.map((e) => Season.values.firstWhere(
-                    (s) => s.name == e,
-                    orElse: () => Season.spring,
-                  ))
-              .toList() ??
-          [],
-      styleTags: (data['styleTags'] as List<dynamic>?)
-              ?.map((e) => StyleTag.values.firstWhere(
-                    (s) => s.name == e,
-                    orElse: () => StyleTag.casual,
-                  ))
-              .toList() ??
-          [],
-      name: data['name'] as String?,
-      notes: data['notes'] as String?,
+      subCategory: row['sub_category'] as String?,
+      palette: List<String>.from(jsonDecode(row['palette'] as String? ?? '[]')),
+      seasonTags: (jsonDecode(row['season_tags'] as String? ?? '[]') as List)
+          .map((e) => Season.values.firstWhere(
+                (s) => s.name == e,
+                orElse: () => Season.spring,
+              ))
+          .toList(),
+      styleTags: (jsonDecode(row['style_tags'] as String? ?? '[]') as List)
+          .map((e) => StyleTag.values.firstWhere(
+                (s) => s.name == e,
+                orElse: () => StyleTag.casual,
+              ))
+          .toList(),
+      notes: row['notes'] as String?,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
+      updatedAt: row['updated_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(row['updated_at'] as int)
+          : null,
     );
   }
 
-  Map<String, dynamic> toFirestore() => {
+  Map<String, dynamic> toRow() => {
+        'id': id,
         'category': category.name,
-        'dominantHex': dominantHex,
+        'name': name,
+        'dominant_hex': dominantHex,
         'warmth': warmth,
         'formality': formality,
-        'waterproof': waterproof,
-        'image': image.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-        if (updatedAt != null) 'updatedAt': FieldValue.serverTimestamp(),
+        'waterproof': waterproof ? 1 : 0,
+        'original_path': image.originalPath,
+        'cutout_path': image.cutoutPath,
+        'thumb_path': image.thumbPath,
         'status': status.name,
-        if (name != null) 'name': name,
-        if (subCategory != null) 'subCategory': subCategory,
-        'palette': palette,
-        'seasonTags': seasonTags.map((e) => e.name).toList(),
-        'styleTags': styleTags.map((e) => e.name).toList(),
-        if (notes != null) 'notes': notes,
+        'sub_category': subCategory,
+        'palette': jsonEncode(palette),
+        'season_tags': jsonEncode(seasonTags.map((e) => e.name).toList()),
+        'style_tags': jsonEncode(styleTags.map((e) => e.name).toList()),
+        'notes': notes,
+        'created_at': createdAt.millisecondsSinceEpoch,
+        'updated_at': updatedAt?.millisecondsSinceEpoch,
       };
 
   GarmentModel copyWith({

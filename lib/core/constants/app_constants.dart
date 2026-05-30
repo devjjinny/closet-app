@@ -12,15 +12,6 @@ abstract class AppConstants {
   static const maxRecommendations = 5;
   static const recentOutfitPenaltyDays = 7;
 
-  // Storage paths
-  static String garmentOriginalPath(String uid, String garmentId) =>
-      'users/$uid/garments/$garmentId/original.jpg';
-  static String garmentCutoutPath(String uid, String garmentId) =>
-      'users/$uid/garments/$garmentId/cutout.png';
-  static String garmentThumbPath(String uid, String garmentId) =>
-      'users/$uid/garments/$garmentId/thumb.webp';
-  static String outfitCollagePath(String uid, String outfitId) =>
-      'users/$uid/outfits/$outfitId/collage.webp';
 }
 
 abstract class WeatherCondition {

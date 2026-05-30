@@ -27,6 +27,7 @@ class RecommendationEngine {
     required WeatherSnapshot weather,
     StyleTag? styleTag,
     List<OutfitModel> recentOutfits = const [],
+    List<OutfitModel> likedOutfits = const [],
     int maxResults = 5,
   }) {
     final activeGarments =
@@ -70,7 +71,7 @@ class RecommendationEngine {
           }
         }
 
-        final score = _scoreOutfit(combo, weather, styleTag, recentOutfits);
+        final score = _scoreOutfit(combo, weather, styleTag, recentOutfits, likedOutfits);
         final reasoning = _generateReasoning(combo, weather, score);
 
         candidates.add(OutfitCandidate(
@@ -101,7 +102,7 @@ class RecommendationEngine {
         }
       }
 
-      final score = _scoreOutfit(combo, weather, styleTag, recentOutfits);
+      final score = _scoreOutfit(combo, weather, styleTag, recentOutfits, likedOutfits);
       final reasoning = _generateReasoning(combo, weather, score);
 
       candidates.add(OutfitCandidate(
@@ -123,6 +124,7 @@ class RecommendationEngine {
     WeatherSnapshot weather,
     StyleTag? styleTag,
     List<OutfitModel> recentOutfits,
+    List<OutfitModel> likedOutfits,
   ) {
     double score = 50.0; // Base score
 
@@ -155,6 +157,9 @@ class RecommendationEngine {
 
     // 6. Formality consistency
     score += _formalityConsistency(items);
+
+    // 7. History boost: liked outfits in similar weather
+    score += _historyBoost(items, weather, likedOutfits);
 
     return score.clamp(0, 100);
   }
@@ -232,6 +237,38 @@ class RecommendationEngine {
     }
 
     return 0;
+  }
+
+  /// 좋아요한 코디 × 유사 날씨 부스트
+  double _historyBoost(
+    Map<GarmentCategory, GarmentModel> items,
+    WeatherSnapshot weather,
+    List<OutfitModel> likedOutfits,
+  ) {
+    if (likedOutfits.isEmpty) return 0;
+
+    final currentIds = items.values.map((g) => g.id).toSet();
+    final currentBand = weather.requiredWarmthBudget;
+    double boost = 0;
+
+    for (final liked in likedOutfits) {
+      final likedBand = liked.weatherSnapshot.requiredWarmthBudget;
+      final isSimilarWeather = (likedBand - currentBand).abs() <= 1;
+      if (!isSimilarWeather) continue;
+
+      final likedIds = liked.items.toSet();
+      final overlap = currentIds.intersection(likedIds).length;
+
+      // 아이템 겹침 수에 따라 부스트
+      if (overlap >= 2) {
+        boost += 12; // 비슷한 날씨에 같은 조합 → 강한 부스트
+        break;
+      } else if (overlap == 1) {
+        boost += 4;
+      }
+    }
+
+    return boost.clamp(0, 15);
   }
 
   /// 포멀도 일관성

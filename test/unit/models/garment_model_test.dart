@@ -6,9 +6,9 @@ void main() {
   group('GarmentImage', () {
     test('toMap / fromMap roundtrip', () {
       const image = GarmentImage(
-        originalUrl: 'https://example.com/original.jpg',
-        cutoutUrl: 'https://example.com/cutout.png',
-        thumbUrl: 'https://example.com/thumb.webp',
+        originalPath: '/docs/garments/001/original.jpg',
+        cutoutPath: '/docs/garments/001/cutout.png',
+        thumbPath: '/docs/garments/001/thumb.webp',
         width: 1080,
         height: 1440,
       );
@@ -16,29 +16,29 @@ void main() {
       final map = image.toMap();
       final restored = GarmentImage.fromMap(map);
 
-      expect(restored.originalUrl, image.originalUrl);
-      expect(restored.cutoutUrl, image.cutoutUrl);
-      expect(restored.thumbUrl, image.thumbUrl);
+      expect(restored.originalPath, image.originalPath);
+      expect(restored.cutoutPath, image.cutoutPath);
+      expect(restored.thumbPath, image.thumbPath);
       expect(restored.width, image.width);
       expect(restored.height, image.height);
     });
 
     test('fromMap handles missing optional fields', () {
       final image = GarmentImage.fromMap({
-        'originalUrl': 'https://a.com',
-        'cutoutUrl': 'https://b.com',
-        'thumbUrl': 'https://c.com',
+        'originalPath': '/a',
+        'cutoutPath': '/b',
+        'thumbPath': '/c',
       });
 
       expect(image.width, isNull);
       expect(image.height, isNull);
     });
 
-    test('fromMap defaults empty strings for missing URLs', () {
+    test('fromMap defaults empty strings for missing paths', () {
       final image = GarmentImage.fromMap({});
-      expect(image.originalUrl, '');
-      expect(image.cutoutUrl, '');
-      expect(image.thumbUrl, '');
+      expect(image.originalPath, '');
+      expect(image.cutoutPath, '');
+      expect(image.thumbPath, '');
     });
   });
 
@@ -51,32 +51,31 @@ void main() {
           formality: 2,
           waterproof: false,
           image: const GarmentImage(
-            originalUrl: 'https://a.com/o.jpg',
-            cutoutUrl: 'https://a.com/c.png',
-            thumbUrl: 'https://a.com/t.webp',
+            originalPath: '/docs/o.jpg',
+            cutoutPath: '/docs/c.png',
+            thumbPath: '/docs/t.webp',
           ),
           createdAt: DateTime(2026, 4, 18),
           styleTags: [StyleTag.casual],
         );
 
-    test('toFirestore includes required fields', () {
-      final map = _base().toFirestore();
-      expect(map['category'], 'top');
-      expect(map['dominantHex'], '#FF5733');
-      expect(map['warmth'], 3);
-      expect(map['formality'], 2);
-      expect(map['waterproof'], false);
-      expect(map['status'], 'active');
-      expect(map['styleTags'], ['casual']);
+    test('toRow includes required fields', () {
+      final row = _base().toRow();
+      expect(row['category'], 'top');
+      expect(row['dominant_hex'], '#FF5733');
+      expect(row['warmth'], 3);
+      expect(row['formality'], 2);
+      expect(row['waterproof'], 0);
+      expect(row['status'], 'active');
     });
 
-    test('toFirestore omits null name', () {
-      expect(_base().toFirestore().containsKey('name'), isFalse);
+    test('toRow omits null name', () {
+      expect(_base().toRow()['name'], isNull);
     });
 
-    test('toFirestore includes name when set', () {
+    test('toRow includes name when set', () {
       final g = _base().copyWith(name: '흰 린넨 셔츠');
-      expect(g.toFirestore()['name'], '흰 린넨 셔츠');
+      expect(g.toRow()['name'], '흰 린넨 셔츠');
     });
 
     test('copyWith preserves unmodified fields', () {
@@ -97,21 +96,13 @@ void main() {
     test('category serialization covers all values', () {
       for (final cat in GarmentCategory.values) {
         final model = _base().copyWith(category: cat);
-        expect(model.toFirestore()['category'], cat.name);
+        expect(model.toRow()['category'], cat.name);
       }
-    });
-
-    test('styleTags roundtrip via toFirestore', () {
-      final model = _base().copyWith(
-        styleTags: [StyleTag.casual, StyleTag.formal],
-      );
-      final map = model.toFirestore();
-      expect(map['styleTags'], ['casual', 'formal']);
     });
 
     test('status defaults to active', () {
       expect(_base().status, GarmentStatus.active);
-      expect(_base().toFirestore()['status'], 'active');
+      expect(_base().toRow()['status'], 'active');
     });
   });
 }

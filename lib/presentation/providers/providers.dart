@@ -1,12 +1,11 @@
 export '../../services/recommendation/recommendation_engine.dart'
     show OutfitCandidate;
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/enums.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/garment_model.dart';
 import '../../data/models/outfit_model.dart';
 import '../../data/models/style_preference.dart';
@@ -14,38 +13,23 @@ import '../../data/models/user_model.dart';
 import '../../data/models/weather_snapshot.dart';
 import '../../data/repositories/garment_repository.dart';
 import '../../data/repositories/outfit_repository.dart';
-import '../../services/auth/auth_service.dart';
 import '../../services/image/background_removal_service.dart';
 import '../../services/image/collage_service.dart';
 import '../../services/recommendation/recommendation_engine.dart';
-import '../../services/storage/firebase_storage_service.dart';
+import '../../services/storage/local_storage_service.dart';
 import '../../services/weather/weather_service.dart';
-
-// ──────────────────────────────
-// App Init
-// ──────────────────────────────
-
-final authInitProvider = FutureProvider<void>((ref) async {
-  final auth = FirebaseAuth.instance;
-  if (auth.currentUser == null) {
-    await auth.signInAnonymously();
-  }
-});
 
 // ──────────────────────────────
 // Services
 // ──────────────────────────────
 
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService();
-});
-
 final weatherServiceProvider = Provider<WeatherService>((ref) {
-  return WeatherService(apiKey: 'f3af7a73ad5b5004f4be31ee7e17672a');
+  const apiKey = String.fromEnvironment('OWM_API_KEY');
+  return WeatherService(apiKey: apiKey);
 });
 
-final storageServiceProvider = Provider<FirebaseStorageService>((ref) {
-  return FirebaseStorageService();
+final localStorageServiceProvider = Provider<LocalStorageService>((ref) {
+  return LocalStorageService();
 });
 
 final backgroundRemovalServiceProvider =
@@ -70,11 +54,17 @@ final recommendationEngineProvider = Provider<RecommendationEngine>((ref) {
 // ──────────────────────────────
 
 final garmentRepositoryProvider = Provider<GarmentRepository>((ref) {
-  return GarmentRepository(storage: ref.watch(storageServiceProvider));
+  final repo = GarmentRepository(
+      storage: ref.watch(localStorageServiceProvider));
+  ref.onDispose(repo.dispose);
+  return repo;
 });
 
 final outfitRepositoryProvider = Provider<OutfitRepository>((ref) {
-  return OutfitRepository(storage: ref.watch(storageServiceProvider));
+  final repo = OutfitRepository(
+      storage: ref.watch(localStorageServiceProvider));
+  ref.onDispose(repo.dispose);
+  return repo;
 });
 
 // ──────────────────────────────
@@ -128,39 +118,43 @@ final onboardingCompleteProvider = FutureProvider<bool>((ref) async {
 });
 
 // ──────────────────────────────
-// Auth State
+// User Prefs (SharedPreferences)
 // ──────────────────────────────
 
-final userPrefsProvider = StreamProvider<UserPrefs>((ref) {
-  final uid = ref.watch(currentUidProvider);
-  if (uid == null) return Stream.value(const UserPrefs());
-  return FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .snapshots()
-      .map((doc) {
-    if (!doc.exists) return const UserPrefs();
-    final data = doc.data() as Map<String, dynamic>;
-    return UserPrefs.fromMap(data['prefs'] as Map<String, dynamic>? ?? {});
-  });
-});
+class UserPrefsNotifier extends Notifier<UserPrefs> {
+  static const _key = 'user_prefs';
 
-final authStateProvider = StreamProvider<User?>((ref) {
-  return ref.watch(authServiceProvider).authStateChanges;
-});
+  @override
+  UserPrefs build() {
+    _load();
+    return const UserPrefs();
+  }
 
-final currentUidProvider = Provider<String?>((ref) {
-  return ref.watch(authStateProvider).value?.uid;
-});
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_key);
+    if (raw != null) {
+      state = UserPrefs.fromMap(
+          Map<String, dynamic>.from(jsonDecode(raw) as Map));
+    }
+  }
+
+  Future<void> saveGender(Gender gender) async {
+    state = state.copyWith(gender: gender);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, jsonEncode(state.toMap()));
+  }
+}
+
+final userPrefsProvider =
+    NotifierProvider<UserPrefsNotifier, UserPrefs>(UserPrefsNotifier.new);
 
 // ──────────────────────────────
 // Garments
 // ──────────────────────────────
 
 final garmentsStreamProvider = StreamProvider<List<GarmentModel>>((ref) {
-  final uid = ref.watch(currentUidProvider);
-  if (uid == null) return Stream.value([]);
-  return ref.watch(garmentRepositoryProvider).watchGarments(uid);
+  return ref.watch(garmentRepositoryProvider).watchGarments();
 });
 
 // ──────────────────────────────
@@ -171,7 +165,6 @@ final currentWeatherProvider = FutureProvider<WeatherSnapshot>((ref) async {
   final weatherService = ref.watch(weatherServiceProvider);
 
   try {
-    // Check location permission
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -179,7 +172,6 @@ final currentWeatherProvider = FutureProvider<WeatherSnapshot>((ref) async {
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      // Default: Seoul
       return weatherService.getCurrentWeather(lat: 37.5665, lon: 126.978);
     }
 
@@ -191,7 +183,6 @@ final currentWeatherProvider = FutureProvider<WeatherSnapshot>((ref) async {
       lon: position.longitude,
     );
   } catch (e) {
-    // Fallback: Seoul
     return weatherService.getCurrentWeather(lat: 37.5665, lon: 126.978);
   }
 });
@@ -202,15 +193,13 @@ final currentWeatherProvider = FutureProvider<WeatherSnapshot>((ref) async {
 
 final recommendationsProvider =
     FutureProvider<List<OutfitCandidate>>((ref) async {
-  final uid = ref.watch(currentUidProvider);
-  if (uid == null) return [];
-
   final garments = ref.watch(garmentsStreamProvider).value ?? [];
   if (garments.isEmpty) return [];
 
   final weather = await ref.watch(currentWeatherProvider.future);
-  final recentOutfits =
-      await ref.watch(outfitRepositoryProvider).getRecentOutfits(uid);
+  final repo = ref.watch(outfitRepositoryProvider);
+  final recentOutfits = await repo.getRecentOutfits();
+  final likedOutfits = await repo.getLikedOutfits();
 
   final engine = ref.watch(recommendationEngineProvider);
   final styleTag = ref.watch(stylePreferenceProvider).selectedTag;
@@ -220,6 +209,7 @@ final recommendationsProvider =
     weather: weather,
     styleTag: styleTag,
     recentOutfits: recentOutfits,
+    likedOutfits: likedOutfits,
   );
 });
 
@@ -228,7 +218,5 @@ final recommendationsProvider =
 // ──────────────────────────────
 
 final outfitsStreamProvider = StreamProvider<List<OutfitModel>>((ref) {
-  final uid = ref.watch(currentUidProvider);
-  if (uid == null) return Stream.value([]);
-  return ref.watch(outfitRepositoryProvider).watchOutfits(uid);
+  return ref.watch(outfitRepositoryProvider).watchOutfits();
 });

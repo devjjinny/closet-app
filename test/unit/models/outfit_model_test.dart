@@ -22,75 +22,54 @@ void main() {
         createdAt: DateTime(2026, 4, 18),
       );
 
-  group('OutfitModel.toFirestore', () {
+  group('OutfitModel.toRow', () {
     test('includes required fields', () {
-      final map = _base().toFirestore();
-      expect(map['dateKey'], '2026-04-18');
-      expect(map['items'], ['g1', 'g2', 'g3']);
-      expect(map.containsKey('weatherSnapshot'), isTrue);
-      expect(map.containsKey('createdAt'), isTrue);
+      final row = _base().toRow();
+      expect(row['date_key'], '2026-04-18');
+      expect(row['items'], isA<String>());
+      expect(row.containsKey('weather_snapshot'), isTrue);
+      expect(row.containsKey('created_at'), isTrue);
     });
 
     test('omits optional fields when null', () {
-      final map = _base().toFirestore();
-      expect(map.containsKey('resultImageUrl'), isFalse);
-      expect(map.containsKey('feedback'), isFalse);
-      expect(map.containsKey('reasoning'), isFalse);
-      expect(map.containsKey('context'), isFalse);
+      final row = _base().toRow();
+      expect(row['collage_path'], isNull);
+      expect(row['feedback'], isNull);
+      expect(row['reasoning'], isNull);
     });
 
-    test('includes resultImageUrl when set', () {
-      final outfit = _base().copyWith(resultImageUrl: 'https://img.url');
-      expect(outfit.toFirestore()['resultImageUrl'], 'https://img.url');
+    test('includes collagePath when set', () {
+      final outfit = _base().copyWith(collagePath: '/docs/outfits/001/collage.webp');
+      expect(outfit.toRow()['collage_path'], '/docs/outfits/001/collage.webp');
     });
 
     test('includes feedback when set', () {
       final outfit = _base().copyWith(feedback: OutfitFeedback.like);
-      expect(outfit.toFirestore()['feedback'], 'like');
+      expect(outfit.toRow()['feedback'], 'like');
     });
 
     test('includes reasoning when set', () {
       final outfit = _base().copyWith(reasoning: '오늘은 따뜻해서 가벼운 코디');
-      expect(outfit.toFirestore()['reasoning'], '오늘은 따뜻해서 가벼운 코디');
+      expect(outfit.toRow()['reasoning'], '오늘은 따뜻해서 가벼운 코디');
     });
   });
 
   group('OutfitModel.copyWith', () {
     test('preserves unchanged fields', () {
-      final updated = _base().copyWith(resultImageUrl: 'https://new.url');
+      final updated = _base().copyWith(collagePath: '/new/path');
       expect(updated.id, 'o001');
       expect(updated.dateKey, '2026-04-18');
       expect(updated.items, ['g1', 'g2', 'g3']);
     });
 
-    test('updates resultImageUrl', () {
-      final updated = _base().copyWith(resultImageUrl: 'https://x.com/img.png');
-      expect(updated.resultImageUrl, 'https://x.com/img.png');
+    test('updates collagePath', () {
+      final updated = _base().copyWith(collagePath: '/docs/collage.webp');
+      expect(updated.collagePath, '/docs/collage.webp');
     });
 
     test('updates feedback', () {
       final updated = _base().copyWith(feedback: OutfitFeedback.dislike);
       expect(updated.feedback, OutfitFeedback.dislike);
-    });
-  });
-
-  group('OutfitContext', () {
-    test('toMap / fromMap roundtrip', () {
-      const ctx = OutfitContext(styleTag: StyleTag.casual, timeOfDay: 'day');
-      final restored = OutfitContext.fromMap(ctx.toMap());
-      expect(restored.styleTag, StyleTag.casual);
-      expect(restored.timeOfDay, 'day');
-    });
-
-    test('fromMap handles missing fields', () {
-      final ctx = OutfitContext.fromMap({});
-      expect(ctx.styleTag, isNull);
-      expect(ctx.timeOfDay, isNull);
-    });
-
-    test('toMap omits null fields', () {
-      const ctx = OutfitContext();
-      expect(ctx.toMap().isEmpty, isTrue);
     });
   });
 

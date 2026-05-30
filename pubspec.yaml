@@ -10,11 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
-  firebase_core: any
-  firebase_auth: any
-  cloud_firestore: any
-  firebase_storage: any
+  # Local DB
+  sqflite: any
 
   # State Management
   flutter_riverpod: any
@@ -38,7 +35,6 @@ dependencies:
   shared_preferences: any
 
   # UI Utilities
-  cached_network_image: any
   flutter_svg: any
   shimmer: any
   intl: any
@@ -60,9 +56,26 @@ dev_dependencies:
   json_serializable: any
   riverpod_generator: any
   mockito: any
+  flutter_native_splash: ^2.4.7
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/characters/
+
+flutter_native_splash:
+  color: "#6C5CE7"
+  color_dark: "#2D3436"
+  image: assets/images/splash_icon.png
+  image_dark: assets/images/splash_icon.png
+  android: true
+  ios: true
+  web: false
+  android_12:
+    color: "#6C5CE7"
+    color_dark: "#2D3436"
+    image: assets/images/splash_icon.png
+    image_dark: assets/images/splash_icon.png
+    icon_background_color: "#6C5CE7"
+    icon_background_color_dark: "#2D3436"

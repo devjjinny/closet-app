@@ -11,22 +11,31 @@ class CharacterWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final gender = ref.watch(userPrefsProvider).value?.gender ?? Gender.female;
+    final gender = ref.watch(userPrefsProvider).gender ?? Gender.female;
     final condition = _weatherCondition(weather);
     final assetPath = 'assets/characters/${gender.name}_$condition.png';
+    final fallbackPath =
+        'assets/characters/${gender.name}_${_fallbackCondition(weather)}.png';
 
     return Center(
       child: Image.asset(
         assetPath,
-        width: 200,
-        height: 260,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => _Placeholder(gender: gender),
+        errorBuilder: (_, __, ___) => Image.asset(
+          fallbackPath,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => _Placeholder(gender: gender),
+        ),
       ),
     );
   }
 
   String _weatherCondition(WeatherSnapshot w) {
+    if (w.isRainy || w.isSnowy) return 'rainy';
+    return 'band${w.temperatureBand}';
+  }
+
+  String _fallbackCondition(WeatherSnapshot w) {
     if (w.isRainy || w.isSnowy) return 'rainy';
     if (w.feelsLike < 10) return 'cold';
     if (w.condition == 'Clouds') return 'cloudy';

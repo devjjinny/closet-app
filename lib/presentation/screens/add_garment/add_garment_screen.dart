@@ -6,9 +6,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../../../core/constants/enums.dart';
 import 'camera_guide_screen.dart';
+import 'cutout_editor_screen.dart';
 import '../../../data/models/garment_model.dart';
 import '../../../services/image/background_removal_service.dart';
 import '../../providers/providers.dart';
+import '../../theme/app_theme.dart';
 
 class AddGarmentScreen extends ConsumerStatefulWidget {
   const AddGarmentScreen({super.key});
@@ -46,76 +48,73 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('옷 등록'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
-      ),
+      backgroundColor: AppTheme.bg,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          18,
+          MediaQuery.of(context).padding.top + 10,
+          18,
+          24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Photo section
+            _AddHeader(
+              step: _cutoutFile == null ? 'STEP 1 / 3' : 'STEP 3 / 3',
+              onClose: () => context.pop(),
+            ),
+            const SizedBox(height: 14),
+            if (_cutoutFile == null) ...[
+              const Text(
+                '옷을 추가해요',
+                style: TextStyle(
+                  color: AppTheme.ink,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '사진 1장이면 배경 제거와 기본 정보 입력까지 이어집니다.',
+                style: TextStyle(color: AppTheme.inkSoft, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/add-garments-bulk'),
+                icon: const Icon(Icons.grid_view_outlined),
+                label: const Text('여러 벌 한번에 등록'),
+              ),
+              const SizedBox(height: 10),
+            ] else ...[
+              const Text(
+                '맞나요?',
+                style: TextStyle(
+                  color: AppTheme.ink,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'AI가 자동으로 채웠어요. 수정 가능.',
+                style: TextStyle(color: AppTheme.inkSoft, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+            ],
             _buildPhotoSection(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 14),
 
             if (_cutoutFile != null) ...[
-              // Shooting guide tip
-              _buildShootingTip(),
-              const SizedBox(height: 16),
-
-              // Name input
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: '이름 (선택)',
-                  hintText: '예: 흰 린넨 셔츠',
-                ),
-                textCapitalization: TextCapitalization.none,
-                maxLength: 30,
-              ),
-              const SizedBox(height: 16),
-
-              // Category
-              _buildCategorySelector(),
-              const SizedBox(height: 16),
-
-              // Color preview
-              if (_dominantColor != null) _buildColorPreview(),
-              const SizedBox(height: 16),
-
-              // Warmth selector
-              _buildWarmthSelector(),
-              const SizedBox(height: 16),
-
-              // Formality slider
-              _buildSlider(
-                label: '포멀도',
-                value: _formality,
-                min: 1,
-                max: 5,
-                labels: ['캐주얼', '보통', '포멀'],
-                onChanged: (v) => setState(() => _formality = v),
-              ),
-              const SizedBox(height: 16),
-
-              // Waterproof toggle
-              SwitchListTile(
-                title: const Text('방수'),
-                value: _waterproof,
-                onChanged: (v) => setState(() => _waterproof = v),
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 16),
-
-              // Style tags
+              _buildInferenceCard(),
+              const SizedBox(height: 10),
+              _buildNameCard(),
+              const SizedBox(height: 10),
               _buildStyleTagSelector(),
-              const SizedBox(height: 32),
+              const SizedBox(height: 10),
+              _buildWaterproofCard(),
+              const SizedBox(height: 18),
 
-              // Save button
               if (_uploading)
                 Column(
                   children: [
@@ -129,10 +128,9 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
                   onPressed: _save,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Text('저장하기', style: TextStyle(fontSize: 16)),
+                    child: Text('저장 (1초)', style: TextStyle(fontSize: 16)),
                   ),
                 ),
-              const SizedBox(height: 32),
             ],
           ],
         ),
@@ -143,40 +141,179 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   Widget _buildPhotoSection() {
     return GestureDetector(
       onTap: _processing ? null : _pickAndProcessImage,
-      child: Container(
-        height: 250,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: _cutoutFile == null ? 420 : 118,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[300]!),
+          color: _cutoutFile == null ? AppTheme.ink : AppTheme.surface,
+          borderRadius: BorderRadius.circular(_cutoutFile == null ? 16 : 14),
+          border: Border.all(
+            color: _cutoutFile == null ? AppTheme.ink : AppTheme.line,
+          ),
         ),
         child: _processing
-            ? const Center(
+            ? Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('배경 제거 중...'),
+                    CircularProgressIndicator(
+                      color: _cutoutFile == null
+                          ? AppTheme.surface
+                          : AppTheme.lavender500,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '배경 제거 중...',
+                      style: TextStyle(
+                        color: _cutoutFile == null
+                            ? AppTheme.surface
+                            : AppTheme.inkSoft,
+                      ),
+                    ),
                   ],
                 ),
               )
             : _cutoutFile != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.file(_cutoutFile!, fit: BoxFit.contain),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            ? Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 92,
+                        height: 92,
+                        child: Image.file(_cutoutFile!, fit: BoxFit.contain),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            '배경제거됨',
+                            style: TextStyle(
+                              color: AppTheme.ink,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            '${_category.label} · WARMTH $_warmth',
+                            style: const TextStyle(
+                              color: AppTheme.inkSoft,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '탭해서 다시 선택',
+                            style: TextStyle(
+                              color: AppTheme.muted,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.all(18),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppTheme.surface.withValues(alpha: 0.85),
+                      width: 1.6,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Stack(
                     children: [
-                      Icon(Icons.add_a_photo, size: 48, color: Colors.grey[400]),
-                      const SizedBox(height: 8),
-                      Text(
-                        '사진을 촬영하거나 앨범에서 선택하세요',
-                        style: TextStyle(color: Colors.grey[600]),
+                      const Positioned.fill(child: _ViewfinderCorners()),
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.checkroom_outlined,
+                              size: 42,
+                              color: AppTheme.surface.withValues(alpha: 0.45),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              '옷을 평평한 곳에',
+                              style: TextStyle(
+                                color: AppTheme.surface,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '밝은 배경 · 옷이 화면을 80% 채우게',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppTheme.surface.withValues(alpha: 0.72),
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 22),
+                            ElevatedButton.icon(
+                              onPressed: null,
+                              icon: Icon(Icons.photo_camera_outlined),
+                              label: Text('촬영 또는 선택'),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildInferenceCard() {
+    return _Panel(
+      child: Column(
+        children: [
+          _buildCategorySelector(),
+          const SizedBox(height: 12),
+          if (_dominantColor != null) _buildColorPreview(),
+          if (_dominantColor != null) const SizedBox(height: 12),
+          _buildWarmthSelector(),
+          const SizedBox(height: 12),
+          _buildSlider(
+            label: '포멀도',
+            value: _formality,
+            min: 1,
+            max: 5,
+            labels: ['캐주얼', '보통', '포멀'],
+            onChanged: (v) => setState(() => _formality = v),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNameCard() {
+    return _Panel(
+      child: TextField(
+        controller: _nameController,
+        decoration: const InputDecoration(
+          labelText: '이름 (선택)',
+          hintText: '예: 흰 린넨 셔츠',
+          counterText: '',
+        ),
+        textCapitalization: TextCapitalization.none,
+        maxLength: 30,
       ),
     );
   }
@@ -207,18 +344,17 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('카테고리', style: TextStyle(fontWeight: FontWeight.w600)),
+        const _PanelLabel('카테고리'),
         const SizedBox(height: 8),
         Wrap(
-          spacing: 8,
+          spacing: 6,
           runSpacing: 8,
           children: GarmentCategory.values.map((cat) {
             final selected = _category == cat;
-            return ChoiceChip(
-              label: Text(cat.label),
+            return _MiniPill(
+              label: cat.label,
               selected: selected,
-              onSelected: (_) => setState(() => _category = cat),
-              selectedColor: const Color(0xFF6C5CE7).withValues(alpha: 0.15),
+              onTap: () => setState(() => _category = cat),
             );
           }).toList(),
         ),
@@ -227,6 +363,49 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   }
 
   Widget _buildColorPreview() {
+    final color = _parseColor(_dominantColor!);
+    return Row(
+      children: [
+        const _PanelLabel('색상'),
+        const Spacer(),
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppTheme.ink),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          _dominantColor!,
+          style: const TextStyle(color: AppTheme.inkSoft, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWaterproofCard() {
+    return _Panel(
+      child: Row(
+        children: [
+          const _PanelLabel('방수'),
+          const Spacer(),
+          Switch(
+            value: _waterproof,
+            onChanged: (v) => setState(() => _waterproof = v),
+            activeThumbColor: AppTheme.ink,
+            activeTrackColor: AppTheme.lavender100,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TODO: remove after add flow migration is complete.
+  // ignore: unused_element
+  Widget _legacyColorPreview() {
     final color = _parseColor(_dominantColor!);
     return Row(
       children: [
@@ -268,7 +447,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('보온성', style: TextStyle(fontWeight: FontWeight.w600)),
+        const _PanelLabel('보온도'),
         const SizedBox(height: 10),
         Row(
           children: List.generate(5, (i) {
@@ -283,23 +462,20 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: selected ? color : color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    color: selected ? AppTheme.ink : AppTheme.surface,
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: selected ? color : Colors.transparent,
-                      width: 2,
+                      color: selected ? AppTheme.ink : AppTheme.line,
                     ),
                   ),
                   child: Column(
                     children: [
-                      Text(_warmthIcons[i], style: const TextStyle(fontSize: 16)),
-                      const SizedBox(height: 2),
                       Text(
                         '$level',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: selected ? Colors.white : color,
+                          color: selected ? AppTheme.surface : AppTheme.inkSoft,
                         ),
                       ),
                     ],
@@ -317,11 +493,9 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: _warmthColors[_warmth - 1].withValues(alpha: 0.08),
+              color: AppTheme.lavender50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: _warmthColors[_warmth - 1].withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: AppTheme.line),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,14 +504,14 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
                   _warmthTemps[_warmth - 1],
                   style: TextStyle(
                     fontSize: 11,
-                    color: _warmthColors[_warmth - 1],
+                    color: AppTheme.lavender600,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   _warmthExamples[_warmth - 1],
-                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  style: const TextStyle(fontSize: 12, color: AppTheme.inkSoft),
                 ),
               ],
             ),
@@ -358,7 +532,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        _PanelLabel(label),
         Slider(
           value: value.toDouble(),
           min: min.toDouble(),
@@ -366,11 +540,18 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
           divisions: max - min,
           label: value.toString(),
           onChanged: (v) => onChanged(v.round()),
+          activeColor: AppTheme.lavender500,
+          inactiveColor: AppTheme.lavender100,
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: labels
-              .map((l) => Text(l, style: TextStyle(fontSize: 11, color: Colors.grey[500])))
+              .map(
+                (l) => Text(
+                  l,
+                  style: const TextStyle(fontSize: 11, color: AppTheme.muted),
+                ),
+              )
               .toList(),
         ),
       ],
@@ -378,32 +559,34 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   }
 
   Widget _buildStyleTagSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('스타일 태그 (선택)', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: StyleTag.values.map((tag) {
-            final selected = _styleTags.contains(tag);
-            return FilterChip(
-              label: Text(tag.label),
-              selected: selected,
-              onSelected: (v) {
-                setState(() {
-                  if (v) {
-                    _styleTags.add(tag);
-                  } else {
-                    _styleTags.remove(tag);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _PanelLabel('스타일 태그 (자동)'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 8,
+            children: StyleTag.values.map((tag) {
+              final selected = _styleTags.contains(tag);
+              return _MiniPill(
+                label: tag.label,
+                selected: selected,
+                onTap: () {
+                  setState(() {
+                    if (selected) {
+                      _styleTags.remove(tag);
+                    } else {
+                      _styleTags.add(tag);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -459,10 +642,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
       sourcePath: picked.path,
       aspectRatio: const CropAspectRatio(ratioX: 3, ratioY: 4),
       uiSettings: [
-        AndroidUiSettings(
-          toolbarTitle: '옷 영역 선택',
-          lockAspectRatio: false,
-        ),
+        AndroidUiSettings(toolbarTitle: '옷 영역 선택', lockAspectRatio: false),
         IOSUiSettings(title: '옷 영역 선택'),
       ],
     );
@@ -476,7 +656,18 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     try {
       // Background removal
       final bgService = ref.read(backgroundRemovalServiceProvider);
-      final cutout = await bgService.removeBackground(File(cropped.path));
+      final rawCutout = await bgService.removeBackground(File(cropped.path));
+
+      // Manual eraser refinement
+      final refined = mounted
+          ? await Navigator.push<File>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CutoutEditorScreen(cutoutFile: rawCutout),
+              ),
+            )
+          : null;
+      final cutout = refined ?? rawCutout;
 
       // Thumbnail
       final thumbService = ref.read(thumbnailServiceProvider);
@@ -495,16 +686,15 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     } catch (e) {
       setState(() => _processing = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('이미지 처리 실패: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('이미지 처리 실패: $e')));
       }
     }
   }
 
   Future<void> _save() async {
-    final uid = ref.read(currentUidProvider);
-    if (uid == null || _originalFile == null || _cutoutFile == null || _thumbFile == null) {
+    if (_originalFile == null || _cutoutFile == null || _thumbFile == null) {
       return;
     }
 
@@ -515,24 +705,27 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
 
     try {
       final garment = GarmentModel(
-        id: '', // Will be set by repository
+        id: '',
         category: _category,
-        name: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
+        name: _nameController.text.trim().isEmpty
+            ? null
+            : _nameController.text.trim(),
         dominantHex: _dominantColor ?? '#808080',
         warmth: _warmth,
         formality: _formality,
         waterproof: _waterproof,
         styleTags: _styleTags,
         image: const GarmentImage(
-          originalUrl: '',
-          cutoutUrl: '',
-          thumbUrl: '',
+          originalPath: '',
+          cutoutPath: '',
+          thumbPath: '',
         ),
         createdAt: DateTime.now(),
       );
 
-      await ref.read(garmentRepositoryProvider).addGarment(
-            uid: uid,
+      await ref
+          .read(garmentRepositoryProvider)
+          .addGarment(
             garment: garment,
             originalFile: _originalFile!,
             cutoutFile: _cutoutFile!,
@@ -546,16 +739,16 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('옷이 등록되었어요!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('옷이 등록되었어요!')));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('저장 실패: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('저장 실패: $e')));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -564,7 +757,149 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
 
   Color _parseColor(String hex) {
     final cleaned = hex.replaceFirst('#', '');
-    if (cleaned.length != 6) return Colors.grey;
+    if (cleaned.length != 6) return AppTheme.muted;
     return Color(int.parse('FF$cleaned', radix: 16));
   }
+}
+
+class _AddHeader extends StatelessWidget {
+  const _AddHeader({required this.step, required this.onClose});
+
+  final String step;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onClose,
+          icon: const Icon(Icons.close),
+          style: IconButton.styleFrom(
+            foregroundColor: AppTheme.ink,
+            minimumSize: const Size(36, 36),
+            fixedSize: const Size(36, 36),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          step,
+          style: const TextStyle(
+            color: AppTheme.inkSoft,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Panel extends StatelessWidget {
+  const _Panel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.line),
+      ),
+      child: Padding(padding: const EdgeInsets.all(12), child: child),
+    );
+  }
+}
+
+class _PanelLabel extends StatelessWidget {
+  const _PanelLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: AppTheme.inkSoft,
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.35,
+      ),
+    );
+  }
+}
+
+class _MiniPill extends StatelessWidget {
+  const _MiniPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.ink : AppTheme.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? AppTheme.ink : AppTheme.line),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppTheme.surface : AppTheme.inkSoft,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ViewfinderCorners extends StatelessWidget {
+  const _ViewfinderCorners();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(painter: _ViewfinderPainter());
+  }
+}
+
+class _ViewfinderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.lavender500
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.square;
+    const inset = 10.0;
+    const len = 26.0;
+
+    void corner(double x, double y, double sx, double sy) {
+      canvas.drawLine(Offset(x, y), Offset(x + len * sx, y), paint);
+      canvas.drawLine(Offset(x, y), Offset(x, y + len * sy), paint);
+    }
+
+    corner(inset, inset, 1, 1);
+    corner(size.width - inset, inset, -1, 1);
+    corner(inset, size.height - inset, 1, -1);
+    corner(size.width - inset, size.height - inset, -1, -1);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

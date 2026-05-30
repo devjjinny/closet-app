@@ -29,9 +29,9 @@ void main() {
       waterproof: waterproof,
       styleTags: styleTags,
       image: const GarmentImage(
-        originalUrl: '',
-        cutoutUrl: '',
-        thumbUrl: '',
+        originalPath: '',
+        cutoutPath: '',
+        thumbPath: '',
       ),
       createdAt: DateTime.now(),
     );

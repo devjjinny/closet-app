@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -81,22 +80,17 @@ class CollageService {
     return Uint8List.fromList(img.encodePng(canvas));
   }
 
-  /// 네트워크 cutout URL들로 콜라주 생성 (저장 시 사용)
-  Future<File> generateCollageFromUrls(
-    Map<GarmentCategory, String> urls,
+  /// 로컬 cutout 경로들로 콜라주 생성
+  Future<File> generateCollageFromPaths(
+    Map<GarmentCategory, String> paths,
   ) async {
     final entries = <String, Uint8List>{};
-    final client = http.Client();
-    try {
-      for (final entry in urls.entries) {
-        if (entry.value.isEmpty) continue;
-        final response = await client.get(Uri.parse(entry.value));
-        if (response.statusCode == 200) {
-          entries[entry.key.name] = response.bodyBytes;
-        }
+    for (final entry in paths.entries) {
+      if (entry.value.isEmpty) continue;
+      final file = File(entry.value);
+      if (await file.exists()) {
+        entries[entry.key.name] = await file.readAsBytes();
       }
-    } finally {
-      client.close();
     }
 
     final resultBytes = await compute(_buildCollage, entries);

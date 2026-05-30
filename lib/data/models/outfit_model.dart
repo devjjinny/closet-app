@@ -1,33 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 import '../../core/constants/enums.dart';
 import 'weather_snapshot.dart';
-
-class OutfitContext {
-  const OutfitContext({
-    this.styleTag,
-    this.timeOfDay,
-  });
-
-  final StyleTag? styleTag;
-  final String? timeOfDay; // "day" | "night"
-
-  factory OutfitContext.fromMap(Map<String, dynamic> map) {
-    return OutfitContext(
-      styleTag: map['styleTag'] != null
-          ? StyleTag.values.firstWhere(
-              (e) => e.name == map['styleTag'],
-              orElse: () => StyleTag.casual,
-            )
-          : null,
-      timeOfDay: map['timeOfDay'] as String?,
-    );
-  }
-
-  Map<String, dynamic> toMap() => {
-        if (styleTag != null) 'styleTag': styleTag!.name,
-        if (timeOfDay != null) 'timeOfDay': timeOfDay,
-      };
-}
 
 class OutfitModel {
   const OutfitModel({
@@ -36,55 +9,48 @@ class OutfitModel {
     required this.items,
     required this.weatherSnapshot,
     required this.createdAt,
-    this.context,
-    this.resultImageUrl,
+    this.collagePath,
     this.feedback,
     this.reasoning,
   });
 
   final String id;
-  final String dateKey; // "YYYY-MM-DD"
-  final List<String> items; // garmentIds
+  final String dateKey;
+  final List<String> items;
   final WeatherSnapshot weatherSnapshot;
   final DateTime createdAt;
-  final OutfitContext? context;
-  final String? resultImageUrl;
+  final String? collagePath;
   final OutfitFeedback? feedback;
   final String? reasoning;
 
-  factory OutfitModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory OutfitModel.fromRow(Map<String, dynamic> row) {
     return OutfitModel(
-      id: doc.id,
-      dateKey: data['dateKey'] as String? ?? '',
-      items: List<String>.from(data['items'] ?? []),
+      id: row['id'] as String,
+      dateKey: row['date_key'] as String? ?? '',
+      items: List<String>.from(jsonDecode(row['items'] as String? ?? '[]')),
       weatherSnapshot: WeatherSnapshot.fromMap(
-          data['weatherSnapshot'] as Map<String, dynamic>? ?? {}),
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      context: data['context'] != null
-          ? OutfitContext.fromMap(data['context'] as Map<String, dynamic>)
-          : null,
-      resultImageUrl: data['resultImageUrl'] as String?,
-      feedback: data['feedback'] != null
+          jsonDecode(row['weather_snapshot'] as String? ?? '{}')),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
+      collagePath: row['collage_path'] as String?,
+      feedback: row['feedback'] != null
           ? OutfitFeedback.values.firstWhere(
-              (e) => e.name == data['feedback'],
+              (e) => e.name == row['feedback'],
               orElse: () => OutfitFeedback.like,
             )
           : null,
-      reasoning: data['reasoning'] as String?,
+      reasoning: row['reasoning'] as String?,
     );
   }
 
-  Map<String, dynamic> toFirestore() => {
-        'dateKey': dateKey,
-        'items': items,
-        'weatherSnapshot': weatherSnapshot.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-        if (context != null) 'context': context!.toMap(),
-        if (resultImageUrl != null) 'resultImageUrl': resultImageUrl,
-        if (feedback != null) 'feedback': feedback!.name,
-        if (reasoning != null) 'reasoning': reasoning,
+  Map<String, dynamic> toRow() => {
+        'id': id,
+        'date_key': dateKey,
+        'items': jsonEncode(items),
+        'weather_snapshot': jsonEncode(weatherSnapshot.toMap()),
+        'created_at': createdAt.millisecondsSinceEpoch,
+        'collage_path': collagePath,
+        'feedback': feedback?.name,
+        'reasoning': reasoning,
       };
 
   OutfitModel copyWith({
@@ -93,8 +59,7 @@ class OutfitModel {
     List<String>? items,
     WeatherSnapshot? weatherSnapshot,
     DateTime? createdAt,
-    OutfitContext? context,
-    String? resultImageUrl,
+    String? collagePath,
     OutfitFeedback? feedback,
     String? reasoning,
   }) {
@@ -104,8 +69,7 @@ class OutfitModel {
       items: items ?? this.items,
       weatherSnapshot: weatherSnapshot ?? this.weatherSnapshot,
       createdAt: createdAt ?? this.createdAt,
-      context: context ?? this.context,
-      resultImageUrl: resultImageUrl ?? this.resultImageUrl,
+      collagePath: collagePath ?? this.collagePath,
       feedback: feedback ?? this.feedback,
       reasoning: reasoning ?? this.reasoning,
     );

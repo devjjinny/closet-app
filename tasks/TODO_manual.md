@@ -29,11 +29,12 @@
 ## iOS 설정
 
 ### 위치 권한 문구 확인
-- [ ] `ios/Runner/Info.plist` → `NSLocationWhenInUseUsageDescription` 문구 자연스러운지 확인
-- [ ] 현재 값: `"날씨 기반 코디 추천을 위해 위치 정보가 필요합니다"`
+- [x] `ios/Runner/Info.plist` → `NSLocationWhenInUseUsageDescription` 문구 자연스러운지 확인
+- [x] 현재 값: `"현재 위치의 날씨를 가져옵니다"`
 
 ### 카메라/갤러리 권한 문구 확인
-- [ ] `NSCameraUsageDescription` — 옷 사진 촬영용 문구 추가 필요 여부 확인
+- [x] `NSCameraUsageDescription` — `"옷 사진 촬영에 카메라를 사용합니다"` 확인 완료
+- [x] `NSPhotoLibraryUsageDescription` — `"앨범에서 옷 사진을 선택합니다"` 확인 완료
 
 ---
 
