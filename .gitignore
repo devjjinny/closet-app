@@ -6,6 +6,9 @@ build/
 
 # Secrets
 secrets.json
+.env
+.env.*
+*.env
 
 # Android
 android/local.properties

@@ -33,11 +33,11 @@
 
 ## 3. API 키 / 환경변수
 
-- [ ] OpenWeatherMap API 키 발급 → Xcode scheme 또는 `.env`에 등록
+- [x] OpenWeatherMap API 키 발급 → 실행 시 `--dart-define`으로 전달
   ```
   flutter run --dart-define=OPENWEATHER_API_KEY=<키>
   ```
-- [ ] App Store 빌드 시 `--dart-define` 포함 여부 확인
+- [ ] App Store 빌드 시 `--dart-define=OPENWEATHER_API_KEY=<키>` 포함 여부 확인
 
 ---
 
@@ -48,7 +48,7 @@
   - `NSCameraUsageDescription`
   - `NSPhotoLibraryUsageDescription`
 - [ ] Bundle ID: `com.yourname.closetapp` → 실제 Bundle ID로 변경
-- [ ] 앱 아이콘 1024×1024 PNG 준비 → `flutter_launcher_icons` 적용
+- [x] 앱 아이콘 1024×1024 PNG 준비 → `flutter_launcher_icons` 적용
 - [ ] 스플래시 화면 설정 (`flutter_native_splash`)
 - [ ] 최소 iOS 버전 15.5 (현재 설정 확인)
 - [ ] Release 빌드 성공 여부 확인: `flutter build ipa`

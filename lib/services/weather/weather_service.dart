@@ -5,10 +5,8 @@ import '../../core/constants/app_constants.dart';
 import '../../data/models/weather_snapshot.dart';
 
 class WeatherService {
-  WeatherService({
-    required this.apiKey,
-    http.Client? httpClient,
-  }) : _client = httpClient ?? http.Client();
+  WeatherService({required this.apiKey, http.Client? httpClient})
+    : _client = httpClient ?? http.Client();
 
   final String apiKey;
   final http.Client _client;
@@ -43,13 +41,20 @@ class WeatherService {
   }
 
   Future<WeatherSnapshot> _fetchFromApi(double lat, double lon) async {
+    if (apiKey.isEmpty) {
+      throw StateError(
+        'OPENWEATHER_API_KEY is not set. '
+        'Run with --dart-define=OPENWEATHER_API_KEY=<key>.',
+      );
+    }
+
     final uri = Uri.parse(
       '$_baseUrl/weather?lat=$lat&lon=$lon&appid=$apiKey&units=metric',
     );
 
-    final response = await _client.get(uri).timeout(
-          const Duration(seconds: 10),
-        );
+    final response = await _client
+        .get(uri)
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
       throw Exception('Weather API error: ${response.statusCode}');
@@ -62,8 +67,7 @@ class WeatherService {
   WeatherSnapshot _parseOpenWeatherResponse(Map<String, dynamic> json) {
     final main = json['main'] as Map<String, dynamic>;
     final wind = json['wind'] as Map<String, dynamic>;
-    final weather =
-        (json['weather'] as List).first as Map<String, dynamic>;
+    final weather = (json['weather'] as List).first as Map<String, dynamic>;
     final rain = json['rain'] as Map<String, dynamic>?;
     final snow = json['snow'] as Map<String, dynamic>?;
 

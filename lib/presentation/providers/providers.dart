@@ -24,7 +24,7 @@ import '../../services/weather/weather_service.dart';
 // ──────────────────────────────
 
 final weatherServiceProvider = Provider<WeatherService>((ref) {
-  const apiKey = String.fromEnvironment('OWM_API_KEY');
+  const apiKey = String.fromEnvironment('OPENWEATHER_API_KEY');
   return WeatherService(apiKey: apiKey);
 });
 
@@ -32,8 +32,9 @@ final localStorageServiceProvider = Provider<LocalStorageService>((ref) {
   return LocalStorageService();
 });
 
-final backgroundRemovalServiceProvider =
-    Provider<BackgroundRemovalService>((ref) {
+final backgroundRemovalServiceProvider = Provider<BackgroundRemovalService>((
+  ref,
+) {
   return BackgroundRemovalService();
 });
 
@@ -55,14 +56,16 @@ final recommendationEngineProvider = Provider<RecommendationEngine>((ref) {
 
 final garmentRepositoryProvider = Provider<GarmentRepository>((ref) {
   final repo = GarmentRepository(
-      storage: ref.watch(localStorageServiceProvider));
+    storage: ref.watch(localStorageServiceProvider),
+  );
   ref.onDispose(repo.dispose);
   return repo;
 });
 
 final outfitRepositoryProvider = Provider<OutfitRepository>((ref) {
   final repo = OutfitRepository(
-      storage: ref.watch(localStorageServiceProvider));
+    storage: ref.watch(localStorageServiceProvider),
+  );
   ref.onDispose(repo.dispose);
   return repo;
 });
@@ -105,8 +108,8 @@ class StylePreferenceNotifier extends Notifier<StylePreference> {
 
 final stylePreferenceProvider =
     NotifierProvider<StylePreferenceNotifier, StylePreference>(
-  StylePreferenceNotifier.new,
-);
+      StylePreferenceNotifier.new,
+    );
 
 // ──────────────────────────────
 // Onboarding
@@ -135,7 +138,8 @@ class UserPrefsNotifier extends Notifier<UserPrefs> {
     final raw = prefs.getString(_key);
     if (raw != null) {
       state = UserPrefs.fromMap(
-          Map<String, dynamic>.from(jsonDecode(raw) as Map));
+        Map<String, dynamic>.from(jsonDecode(raw) as Map),
+      );
     }
   }
 
@@ -146,8 +150,9 @@ class UserPrefsNotifier extends Notifier<UserPrefs> {
   }
 }
 
-final userPrefsProvider =
-    NotifierProvider<UserPrefsNotifier, UserPrefs>(UserPrefsNotifier.new);
+final userPrefsProvider = NotifierProvider<UserPrefsNotifier, UserPrefs>(
+  UserPrefsNotifier.new,
+);
 
 // ──────────────────────────────
 // Garments
@@ -191,8 +196,9 @@ final currentWeatherProvider = FutureProvider<WeatherSnapshot>((ref) async {
 // Recommendations
 // ──────────────────────────────
 
-final recommendationsProvider =
-    FutureProvider<List<OutfitCandidate>>((ref) async {
+final recommendationsProvider = FutureProvider<List<OutfitCandidate>>((
+  ref,
+) async {
   final garments = ref.watch(garmentsStreamProvider).value ?? [];
   if (garments.isEmpty) return [];
 

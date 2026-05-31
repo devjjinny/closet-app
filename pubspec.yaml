@@ -57,6 +57,7 @@ dev_dependencies:
   riverpod_generator: any
   mockito: any
   flutter_native_splash: ^2.4.7
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
@@ -79,3 +80,9 @@ flutter_native_splash:
     image_dark: assets/images/splash_icon.png
     icon_background_color: "#6C5CE7"
     icon_background_color_dark: "#2D3436"
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/app_icon.png
+  remove_alpha_ios: true

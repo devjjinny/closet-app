@@ -27,7 +27,14 @@ flutterfire configure
 2. 실행 시 환경변수로 전달:
 
 ```bash
+OPENWEATHER_API_KEY=your_api_key_here tool/run.sh
+```
+
+직접 Flutter 명령을 실행할 때는 아래처럼 전달합니다.
+
+```bash
 flutter run --dart-define=OPENWEATHER_API_KEY=your_api_key_here
+flutter build ipa --release --dart-define=OPENWEATHER_API_KEY=your_api_key_here
 ```
 
 ## 3. 의존성 설치 및 빌드
@@ -47,10 +54,10 @@ firebase deploy --only firestore:rules,storage
 
 ```bash
 # iOS
-flutter run -d ios
+OPENWEATHER_API_KEY=your_api_key_here tool/run.sh -d ios
 
 # Android
-flutter run -d android
+OPENWEATHER_API_KEY=your_api_key_here tool/run.sh -d android
 ```
 
 ## 프로젝트 구조

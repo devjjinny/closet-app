@@ -7,7 +7,7 @@ import '../../services/storage/local_storage_service.dart';
 
 class OutfitRepository {
   OutfitRepository({LocalStorageService? storage})
-      : _storage = storage ?? LocalStorageService();
+    : _storage = storage ?? LocalStorageService();
 
   final LocalStorageService _storage;
   final _controller = StreamController<List<OutfitModel>>.broadcast();
@@ -63,7 +63,9 @@ class OutfitRepository {
     if (collageFile != null) {
       onProgress?.call(0.0);
       collagePath = await _storage.saveOutfitCollage(
-          file: collageFile, outfitId: id);
+        file: collageFile,
+        outfitId: id,
+      );
       onProgress?.call(0.8);
     }
 
@@ -72,7 +74,7 @@ class OutfitRepository {
     await db.insert('outfits', newOutfit.toRow());
     onProgress?.call(1.0);
 
-    _emitAll();
+    await _emitAll();
     return newOutfit;
   }
 
@@ -90,7 +92,7 @@ class OutfitRepository {
     await _storage.deleteOutfitFiles(outfitId);
     final db = await LocalDatabase.instance.db;
     await db.delete('outfits', where: 'id = ?', whereArgs: [outfitId]);
-    _emitAll();
+    await _emitAll();
   }
 
   Future<void> _emitAll() async {

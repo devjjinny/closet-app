@@ -26,11 +26,11 @@
 - [x] 🟢 #D19 `나` 탭/설정 화면 추가 여부 결정 및 구현
 
 ### Phase 1 — 기술 선결 조건 (5/5-11)
-- [ ] 🟠 #M02 API 키 --dart-define 이전 (현재 하드코딩)
-- [ ] 🟡 #M03 unawaited_futures 경고 수정 (6건)
+- [x] 🟢 #M02 API 키 --dart-define 이전
+- [x] 🟢 #M03 unawaited_futures 경고 수정 (6건)
 
 ### Phase 2 — 캐릭터·에셋 (5/12-18)
-- [ ] 🟠 #M04 앱 아이콘 신규 디자인 + flutter_launcher_icons 통합 [외부 작업 필요]
+- [x] 🟢 #M04 앱 아이콘 신규 디자인 + flutter_launcher_icons 통합
 - [ ] 🟠 #M05b 캐릭터 이미지 18개 디자인 [외부 작업]
 - [ ] 🟡 #M05c assets 교체 (18개 PNG → assets/characters/)
 - [ ] 🟠 #M07 개인정보 처리방침 작성 + GitHub Pages 호스팅
