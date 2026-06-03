@@ -17,17 +17,16 @@
 | #09 | 코디 저장 / 기록 화면 | ✅ |
 | #10 | 스타일 선호 저장 | ✅ |
 | #12 | 에러 / 로딩 공통 처리 | ✅ |
-| #14 | Firebase 연결 (Auth/Firestore/Storage) | ✅ |
+| #14 | 로컬 저장소 연결 (SQLite/기기 파일 저장) | ✅ |
 | #04 | 캐릭터 (Rive) | ⬜ v1.1 |
 
 ---
 
-## 2. Firebase 설정
+## 2. 저장소 / 권한 설정
 
-- [ ] Anonymous Auth 활성화 (Firebase Console → Authentication)
-- [ ] Firestore 보안 규칙 배포 (`firebase deploy --only firestore:rules`)
-- [ ] Storage 보안 규칙 배포 (`firebase deploy --only storage`)
-- [ ] Firestore 인덱스 확인 (앱 실행 후 콘솔 경고 없는지)
+- [x] SQLite 로컬 DB 동작 확인
+- [x] 기기 파일 저장 동작 확인
+- [ ] iOS 권한 문구 최종 확인
 
 ---
 
@@ -64,7 +63,7 @@
   - 6.9인치 (iPhone 16 Pro Max)
   - 6.1인치 (iPhone 16)
   - iPad (선택)
-- [ ] 개인정보 처리방침 URL (필수) — 호스팅된 URL 필요
+- [ ] 개인정보 처리방침 URL (필수) — 후보: `https://devjjinny.github.io/closet-app/privacy/`
 - [ ] 연령 등급: 4+ 설정
 - [ ] 가격: 무료
 
@@ -74,8 +73,8 @@
 
 앱이 수집하는 데이터:
 - 위치 정보 (날씨 조회용, 저장 안 함)
-- 사진 (옷 등록, Firebase Storage에 저장)
-- Firebase 익명 UID (사용자 데이터 연결용)
+- 사진 (옷 등록/코디 기록용, 기기 내 저장)
+- 옷장/코디 기록 (SQLite 로컬 DB에 저장)
 
 ---
 

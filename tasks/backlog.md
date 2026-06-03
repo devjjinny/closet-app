@@ -31,9 +31,9 @@
 
 ### Phase 2 — 캐릭터·에셋 (5/12-18)
 - [x] 🟢 #M04 앱 아이콘 신규 디자인 + flutter_launcher_icons 통합
-- [ ] 🟠 #M05b 캐릭터 이미지 18개 디자인 [외부 작업]
-- [ ] 🟡 #M05c assets 교체 (18개 PNG → assets/characters/)
-- [ ] 🟠 #M07 개인정보 처리방침 작성 + GitHub Pages 호스팅
+- [x] 🟢 #M05b 캐릭터 이미지 18개 디자인
+- [x] 🟢 #M05c assets 교체 (18개 PNG → assets/characters/)
+- [ ] 🟠 #M07 개인정보 처리방침 작성 + GitHub Pages 호스팅 (문서/이메일 완료, Pages URL 활성화 필요)
 
 ### Phase 3 — App Store Connect & TestFlight (5/19-25)
 - [ ] 🟠 #M08 Apple Developer Bundle ID 등록 [수동]
